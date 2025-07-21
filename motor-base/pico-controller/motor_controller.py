@@ -94,38 +94,52 @@ class MotorPID:
         self.last_setting = output
         self.last_value = current_value
         speed = -output if self.reverse else output
-        print(f"Current: {current_value}, Error: {error}, Delta: {delta}, Output: {output}, Speed: {speed}")
+        #print(f"Current: {current_value}, Error: {error}, Delta: {delta}, Output: {output}, Speed: {speed}")
         self.motor.set_speed(speed)
 
-async def pid_update_loop(motor_pid: MotorPID):
-    while True:
-        motor_pid.update()
-        await asyncio.sleep(0.05)
-
-async def test(motor_pid: MotorPID):
-    motor_pid.set_speed(20)
-    await asyncio.sleep(3)
-    motor_pid.set_speed(50)
-    await asyncio.sleep(3)
-    motor_pid.set_speed(100)
-    await asyncio.sleep(3)
-    motor_pid.set_speed(-50)
-    await asyncio.sleep(3)
-    motor_pid.set_speed(0)
-    await asyncio.sleep(3)
-
-def init_motor():
-    pwm = Pin(0, Pin.OUT)
-    dir = Pin(1, Pin.OUT)
-    pulse = Pin(2, Pin.IN, Pin.PULL_UP)
+def init_motor(start:int):
+    pwm = Pin(start, Pin.OUT)
+    dir = Pin(start+1, Pin.OUT)
+    pulse = Pin(start+2, Pin.IN, Pin.PULL_UP)
     motor = Motor(pwm, dir, pulse, 2)
     return MotorPID(motor)
 
-async def main():
-    motor_pid = init_motor()
-    motor_pid.motor.set_speed(0)  # Ensure motor is stopped initially
-    asyncio.create_task(pid_update_loop(motor_pid))
-    asyncio.create_task(test(motor_pid))
-    await asyncio.sleep(30)  # Yield control to the event loop
+class MotorControl:
+    """
+        Class to control multiple motors with PID.
+        Motors are initialized  on GPIO pin groups 0+1+2, 3+5+5, 6+7+8 and 9+10+11.
+        Each group has 3 pins: PWM, Direction and Pulse.
 
-asyncio.run(main())
+        The update loop runs every 50ms to update the motor speeds and needs to be run in an asyncio event loop.
+    """
+  
+    def __init__(self):
+        self.motors = [init_motor(i) for i in range(0, 12, 3)]
+
+    def get_motors(self):
+        return self.motors
+    
+    def pid_update(self):
+        for motor_pid in self.motors:
+            motor_pid.update()
+
+    def set_speed(self, speeds: list[int]):
+        """
+        Set the speed of each motor in the list.
+        Speeds should be a list of integers corresponding to each motor.
+        """
+        for i, speed in enumerate(speeds):
+            if i < len(self.motors):
+                self.motors[i].set_speed(speed)
+
+    def set_all_speeds(self, speed: int):
+        """
+        Set the speed of all motors to the same value.
+        """
+        for motor_pid in self.motors:
+            motor_pid.set_speed(speed)
+
+    async def pid_update_loop(self):
+        while True:
+            self.pid_update()
+            await asyncio.sleep(0.05)

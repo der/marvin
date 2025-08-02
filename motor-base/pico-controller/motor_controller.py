@@ -107,14 +107,14 @@ def init_motor(start:int):
 class MotorControl:
     """
         Class to control multiple motors with PID.
-        Motors are initialized  on GPIO pin groups 0+1+2, 3+5+5, 6+7+8 and 9+10+11.
+        Motors are initialized  on GPIO pin groups 10+11+12, 13+14+15, 16+17+18 and 19+20+21.
         Each group has 3 pins: PWM, Direction and Pulse.
 
         The update loop runs every 50ms to update the motor speeds and needs to be run in an asyncio event loop.
     """
   
     def __init__(self):
-        self.motors = [init_motor(i) for i in range(0, 12, 3)]
+        self.motors = [init_motor(i) for i in range(10, 22, 3)]
 
     def get_motors(self):
         return self.motors

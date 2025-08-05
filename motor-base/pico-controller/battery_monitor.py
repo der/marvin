@@ -63,12 +63,3 @@ class BatteryMonitor:
 
 def emergency():
     print("Battery dead!!")
-
-def main():
-    led = BatteryLed()
-    monitor = BatteryMonitor(led, emergency)
-    asyncio.create_task(monitor.run_monitor())
-    while True:
-        await asyncio.sleep(10)
-
-asyncio.run(main())

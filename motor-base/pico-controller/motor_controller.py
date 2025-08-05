@@ -104,6 +104,24 @@ def init_motor(start:int):
     motor = Motor(pwm, dir, pulse, 2)
     return MotorPID(motor)
 
+
+MOTOR_DECODE = {
+     "f" : [ 1, 1, 1, 1],
+     "b" : [-1,-1,-1,-1],
+    "sr" : [ 1,-1,-1, 1],
+    "sl" : [-1, 1, 1,-1],
+    "dr" : [ 1, 0, 0, 1],
+    "Dl" : [-1, 0, 0,-1],
+    "dl" : [ 0, 1, 1, 0],
+    "Dr" : [ 0,-1,-1, 0],
+    "tr" : [ 1, 1, 0, 0],
+    "tl" : [ 0, 0, 1, 1],
+    "Tr" : [ 0, 0,-1,-1],
+    "Tl" : [-1,-1, 0, 0],
+    "rr" : [ 1, 1,-1,-1],
+    "rl" : [-1,-1, 1, 1],
+}
+
 class MotorControl:
     """
         Class to control multiple motors with PID.
@@ -130,14 +148,19 @@ class MotorControl:
         """
         for i, speed in enumerate(speeds):
             if i < len(self.motors):
-                self.motors[i].set_speed(speed)
+                # print(f"setting speed of {i} to {speed if i > 1 else -speed}")
+                # reverse left hand side motors (because mounted other way!)
+                self.motors[i].set_speed(speed if i > 1 else -speed)
 
     def set_all_speeds(self, speed: int):
         """
         Set the speed of all motors to the same value.
         """
-        for motor_pid in self.motors:
-            motor_pid.set_speed(speed)
+        self.set_speed([speed]*4)
+        
+    def set_motion(self, speed: int, dir: str):
+        pattern = MOTOR_DECODE.get(dir) or [0,0,0,0]
+        self.set_speed([x*speed for x in pattern])
 
     async def pid_update_loop(self):
         while True:

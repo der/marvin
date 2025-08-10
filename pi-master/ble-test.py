@@ -20,7 +20,7 @@ def handle_disconnect(_: BleakClient):
     for task in asyncio.all_tasks():
         task.cancel()
 
-async def ble_send():
+async def ble_connect(task):
     print('Scanning for devices...')
     device = await BleakScanner.find_device_by_name('rover', 36000.0)
     if (device is None):
@@ -34,6 +34,9 @@ async def ble_send():
         rover = client.services.get_service(UART_SERVICE_UUID)
         rx = rover.get_characteristic(UART_RX_CHAR_UUID)
 
+        print("Starting task")
+        asyncio.create_task(task())
+
         while True:
             command = queue.get()
             if command == b'x':
@@ -41,25 +44,26 @@ async def ble_send():
                 break
             await client.write_gatt_char(rx, command, response=False)
 
+async def send(cmd):
+    print(f"Sending {cmd.decode()}")
+    queue.put(cmd)
+    await asyncio.sleep(2)
+
 async def dance():
-    queue.put(b'f')
-    await asyncio.sleep(2)
-    queue.put(b'sr')
-    await asyncio.sleep(2)
-    queue.put(b'b')
-    await asyncio.sleep(2)
-    queue.put(b'sl')
-    await asyncio.sleep(2)
-    queue.put(b'sx')
+    print("Dance called")
+    await send(b'f')
+    await send(b'sr')
+    await send(b'b')
+    await send(b'sl')
+    await send(b'x')
 
 async def main():
     await asyncio.gather(
-        ble_send(),
-        dance()
+        ble_connect(dance)
     )
 
 try:
     asyncio.run(main())
 except asyncio.CancelledError:
-    # task is cancelled on disconnect, so we ignore this error
-    pass
+    print("Exiting")
+    sys.exit()

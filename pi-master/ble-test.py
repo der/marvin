@@ -1,9 +1,65 @@
+from queue import Queue
+import sys
+import os
+from bleak import BleakClient, BleakScanner
+from bleak.backends.characteristic import BleakGATTCharacteristic
+from bleak.backends.device import BLEDevice
+from bleak.backends.scanner import AdvertisementData
 import asyncio
-from bleak import BleakScanner
+
+# Set up send connection to the rover listening on queue of commands to send
+queue = Queue()
+
+UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+UART_TX_CHAR_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+
+def handle_disconnect(_: BleakClient):
+    print("Device disconnected, goodbye.")
+    # cancelling all tasks effectively ends the program
+    for task in asyncio.all_tasks():
+        task.cancel()
+
+async def ble_send():
+    print('Scanning for devices...')
+    device = await BleakScanner.find_device_by_name('rover', 36000.0)
+    if (device is None):
+        print('Device not found')
+        sys.exit(1)
+        return  
+    print(f'Connecting to {device.name}')
+
+    async with BleakClient(device, disconnected_callback=handle_disconnect) as client:
+        print('Connected to rover')
+        rover = client.services.get_service(UART_SERVICE_UUID)
+        rx = rover.get_characteristic(UART_RX_CHAR_UUID)
+
+        while True:
+            command = queue.get()
+            if command == b'x':
+                print('Quit requested')
+                break
+            await client.write_gatt_char(rx, command, response=False)
+
+async def dance():
+    queue.put(b'f')
+    await asyncio.sleep(2)
+    queue.put(b'sr')
+    await asyncio.sleep(2)
+    queue.put(b'b')
+    await asyncio.sleep(2)
+    queue.put(b'sl')
+    await asyncio.sleep(2)
+    queue.put(b'sx')
 
 async def main():
-    devices = await BleakScanner.discover()
-    for d in devices:
-        print(d)
+    await asyncio.gather(
+        ble_send(),
+        dance()
+    )
 
-asyncio.run(main())
+try:
+    asyncio.run(main())
+except asyncio.CancelledError:
+    # task is cancelled on disconnect, so we ignore this error
+    pass

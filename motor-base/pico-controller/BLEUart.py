@@ -54,6 +54,7 @@ class BleUart:
                 led.on()
                 self._connection = connection
                 self.connected = True
-                asyncio.create_task(self.watch_for_data())
+                task = asyncio.create_task(self.watch_for_data())
                 await connection.disconnected(timeout_ms=None)
+                task.cancel()
                 led.off()

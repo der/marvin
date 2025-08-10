@@ -50,6 +50,7 @@ class MotorController:
                     if command == 'x':
                         print('Quit requested')
                         self.is_connected = False
+                        client.disconnect()
                         break
                     print(f"Sending {command}")
                     await client.write_gatt_char(rx, command.encode(), response=False)

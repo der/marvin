@@ -41,16 +41,17 @@ async def ble_send():
                 break
             await client.write_gatt_char(rx, command, response=False)
 
+async def send(cmd):
+    print(f"Sending {cmd}")
+    queue.put(cmd)
+    await asyncio.sleep(2000)
+
 async def dance():
-    queue.put(b'f')
-    await asyncio.sleep(2)
-    queue.put(b'sr')
-    await asyncio.sleep(2)
-    queue.put(b'b')
-    await asyncio.sleep(2)
-    queue.put(b'sl')
-    await asyncio.sleep(2)
-    queue.put(b'sx')
+    send(b'f')
+    send(b'sr')
+    send(b'b')
+    send(b'sl')
+    send(b'x')
 
 async def main():
     await asyncio.gather(

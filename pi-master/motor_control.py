@@ -44,24 +44,27 @@ class MotorController:
             rx = rover.get_characteristic(UART_RX_CHAR_UUID)
 
             while True:
+                # Check if there's a command in the queue without blocking
                 try:
-                    # Check if there's a command in the queue without blocking
-                    if not self.queue.empty():
-                        command = self.queue.get_nowait()
-                        if command == 'x':
-                            print('Quit requested')
-                            self.is_connected = False
-                            break
-                        print(f"Sending {command}")
-                        await client.write_gatt_char(rx, command.encode(), response=False)
-                    else:
-                        # Give control back to the event loop to allow other tasks to run
-                        await asyncio.sleep(0.01)
-                except Exception as e:
-                    print(f"Error: {e}")
+                    command = self.queue.pop()
+                    if command == 'x':
+                        print('Quit requested')
+                        self.is_connected = False
+                        break
+                    print(f"Sending {command}")
+                    await client.write_gatt_char(rx, command.encode(), response=False)
+                except IndexError:
+                    # Give control back to the event loop to allow other tasks to run
                     await asyncio.sleep(0.01)
 
     def handle_disconnect(self, _: BleakClient):
         print("Device disconnected, goodbye.")
         self.is_connected = False
+        self.queue.append("x")
+
+    def send(self, speed: int, dir: str):
+        self.queue.append(f"{speed}{dir}")
+
+    def shutdown(self):
+        self.queue.append("s")
         self.queue.append("x")

@@ -58,32 +58,6 @@ def capture_frames():
                 latest_frame = copy(main)
                 latest_lores = copy(lores)
 
-async def startup():
-    """Initialize camera and start frame capture thread on startup."""
-    if not initialize_camera():
-        print("Failed to initialize camera. The stream will not work.")
-        return
-    
-    # Start the frame capture thread
-    capture_thread = threading.Thread(target=capture_frames)
-    capture_thread.daemon = True
-    capture_thread.start()
-    print("Camera capture thread started.")
-
-async def shutdown():
-    """Release camera resources on shutdown."""
-    global stream_active, motor_timer
-    stream_active = False
-    
-    # Cancel motor timeout timer
-    if motor_timer is not None:
-        motor_timer.cancel()
-    
-    # Release the camera
-    if camera is not None:
-        camera.stop()
-        print("Camera stopped.")
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await startup()
@@ -218,18 +192,43 @@ async def set_motor(s: int, dir: str):
     """
     try:
         if motor.is_connected:
-            motor.queue.append(f"{s}{dir}")
+            if dir == "s":
+                motor.queue.append(dir)
+            else:
+                motor.queue.append(f"{s}{dir}")
             return {"status": "success", "message": f"Motor set to dir={dir}, speed={s}"}
         else:
             return {"status": "error", "message": "Motor base BLE connection not ready"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-async def main():
+async def startup():
+    """Initialize camera and start frame capture thread on startup."""
+    if not initialize_camera():
+        print("Failed to initialize camera. The stream will not work.")
+        return
+    # Start the frame capture thread
+    capture_thread = threading.Thread(target=capture_frames)
+    capture_thread.daemon = True
+    capture_thread.start()
+    print("Camera capture thread started.")
+    # Start BLE connection listener
+    print("Starting BLE connection to motor base in background")
+    asyncio.create_task(motor.run())
+
+
+async def shutdown():
+    """Release camera resources on shutdown."""
+    stream_active = False
+    if camera is not None:
+        camera.stop()
+        print("Camera stopped.")
+    if motor.is_connected:
+        motor.shutdown()
+
+def main():
     """Main function to start the FastAPI server with Uvicorn."""
     try:
-        print("Starting BLE connection to motor base in background")
-        asyncio.create_task(motor.run())
         print(f"Starting server at http://{HOST}:{PORT}")
         print("Press Ctrl+C to stop the server")
         uvicorn.run(app, host=HOST, port=PORT)
@@ -237,8 +236,4 @@ async def main():
         print("\nShutting down...")
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except asyncio.CancelledError:
-        print("Exiting")
-        sys.exit()
+    main()

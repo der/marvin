@@ -65,6 +65,7 @@ async def dance():
     await send(b'sr')
     await send(b'b')
     await send(b'sl')
+    await send(b'99f')
     await send(b'x')
 
 async def main():

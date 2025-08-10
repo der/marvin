@@ -1,0 +1,4 @@
+fastapi==0.109.0
+uvicorn==0.25.0
+opencv-python==4.8.1.78
+bleak==1.0.1

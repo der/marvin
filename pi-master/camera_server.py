@@ -3,8 +3,9 @@ from picamera2 import Picamera2
 from libcamera import Transform
 from copy import copy
 import cv2
-import io
+import asyncio
 import time
+import sys
 import threading
 from typing import Iterator
 from fastapi import FastAPI, Response
@@ -12,7 +13,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 import uvicorn
 from contextlib import asynccontextmanager
 import zlib
-import serial
+from motor_control import MotorController
 
 # Configuration
 HOST = "0.0.0.0"  # Allow access from any device on the network
@@ -25,44 +26,6 @@ frame_lock = threading.Lock()
 latest_lores = None
 latest_frame = None
 stream_active = True
-
-# Motor timeout handling
-last_motor_command_time = 0
-motor_timeout = 1.0  # 1 second timeout
-motor_timer = None
-
-# Initialize UART
-ser = serial.Serial("/dev/serial0", 115200)
-
-def int_to_byte(x: int):
-    """Convert an integer to a single byte."""
-    return x.to_bytes(1, 'big', signed=True)[0]
-
-def send_xy(x: int, y: int):
-    """Send x and y values to the motor controller over UART."""
-    message = bytearray([
-        b'm'[0],
-        int_to_byte(x),
-        int_to_byte(y),
-        b'\n'[0]])
-    ser.write(message)
-
-def motor_timeout_handler():
-    """Called when motor timeout expires to send stop command."""
-    global motor_timer
-    send_xy(0, 0)
-    motor_timer = None
-
-def reset_motor_timeout():
-    """Reset the motor timeout timer."""
-    global motor_timer, last_motor_command_time
-    last_motor_command_time = time.time()
-    
-    if motor_timer is not None:
-        motor_timer.cancel()
-    
-    motor_timer = threading.Timer(motor_timeout, motor_timeout_handler)
-    motor_timer.start()
 
 def initialize_camera():
     """Initialize the camera."""
@@ -163,7 +126,7 @@ async def still():
     return await response_for(latest_frame)
 
 @app.get("/still-lores")
-async def still():
+async def still_lores():
     """Single log-res image."""
     return await response_for(latest_lores)
 
@@ -245,22 +208,28 @@ async def index():
     """
     return HTMLResponse(content=html_content)
 
+motor = MotorController()
+
 @app.post("/set-motor")
-async def set_motor(x: int, y: int):
+async def set_motor(s: int, dir: str):
     """
-    Set the x and y values for the motor controller.
-    Example: POST /set-motor?x=50&y=-50
+    Set the speed and direction of the motor
+    Example: POST /set-motor?s=50&dir=f
     """
     try:
-        send_xy(x, y)
-        reset_motor_timeout()
-        return {"status": "success", "message": f"Motor set to x={x}, y={y}"}
+        if motor.is_connected:
+            motor.queue.append(f"{s}{dir}")
+            return {"status": "success", "message": f"Motor set to dir={dir}, speed={s}"}
+        else:
+            return {"status": "error", "message": "Motor base BLE connection not ready"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-def main():
+async def main():
     """Main function to start the FastAPI server with Uvicorn."""
     try:
+        print("Starting BLE connection to motor base in background")
+        asyncio.create_task(motor.run())
         print(f"Starting server at http://{HOST}:{PORT}")
         print("Press Ctrl+C to stop the server")
         uvicorn.run(app, host=HOST, port=PORT)
@@ -268,4 +237,8 @@ def main():
         print("\nShutting down...")
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except asyncio.CancelledError:
+        print("Exiting")
+        sys.exit()

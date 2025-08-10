@@ -120,6 +120,7 @@ MOTOR_DECODE = {
     "Tl" : [-1,-1, 0, 0],
     "rr" : [ 1, 1,-1,-1],
     "rl" : [-1,-1, 1, 1],
+     "s" : [ 0, 0, 0, 0],
 }
 
 class MotorControl:

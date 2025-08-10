@@ -2,6 +2,7 @@ from motor_controller import MotorControl
 import uasyncio as asyncio
 from battery_monitor import BatteryLed, BatteryMonitor
 import BLEUart
+import ure
 
 from resettable_timer import ResettableTimer
 
@@ -20,11 +21,19 @@ fail_safe_timer = ResettableTimer(3000, fail_safe)
 led = BatteryLed()
 monitor = BatteryMonitor(led, emergency)
 
+command_pattern = ure.compile(r"^(\d*)([A-Za-z]+)")
+
 def command(cmdin):
     cmd = cmdin.decode()
     print("Received command ", cmd)
-    motor_control.set_motion(50, cmd)
-    fail_safe_timer.start()
+    match = command_pattern.match(cmd)
+    if match:
+        speed = match.group(1)
+        command = match.group(2)
+
+        speed_setting = int(speed) if speed else 50
+        motor_control.set_motion(speed_setting, command)
+        fail_safe_timer.start()
 
 async def main():
     uart = BLEUart.BleUart("rover", command)

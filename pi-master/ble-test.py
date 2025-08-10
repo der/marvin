@@ -38,11 +38,21 @@ async def ble_connect(task):
         asyncio.create_task(task())
 
         while True:
-            command = queue.get()
-            if command == b'x':
-                print('Quit requested')
-                break
-            await client.write_gatt_char(rx, command, response=False)
+            # Use a timeout with queue.get to avoid blocking indefinitely
+            try:
+                # Check if there's a command in the queue without blocking
+                if not queue.empty():
+                    command = queue.get_nowait()
+                    if command == b'x':
+                        print('Quit requested')
+                        break
+                    await client.write_gatt_char(rx, command, response=False)
+                else:
+                    # Give control back to the event loop to allow other tasks to run
+                    await asyncio.sleep(0.1)
+            except Exception as e:
+                print(f"Error: {e}")
+                await asyncio.sleep(0.1)
 
 async def send(cmd):
     print(f"Sending {cmd.decode()}")

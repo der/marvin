@@ -35,33 +35,33 @@ class MotorController:
             print('Device not found')
             sys.exit(1)
             return  
-        print(f'Connecting to {device.name}')
+        
+        while True:
+            print(f'Connecting to {device.name}')
+            async with BleakClient(device, disconnected_callback=self.handle_disconnect) as client:
+                print('Connected to rover')
+                self.is_connected = True
+                rover = client.services.get_service(UART_SERVICE_UUID)
+                rx = rover.get_characteristic(UART_RX_CHAR_UUID)
 
-        async with BleakClient(device, disconnected_callback=self.handle_disconnect) as client:
-            print('Connected to rover')
-            self.is_connected = True
-            rover = client.services.get_service(UART_SERVICE_UUID)
-            rx = rover.get_characteristic(UART_RX_CHAR_UUID)
-
-            while True:
-                # Check if there's a command in the queue without blocking
-                try:
-                    command = self.queue.pop()
-                    if command == 'x':
-                        print('Quit requested')
-                        self.is_connected = False
-                        client.disconnect()
-                        break
-                    print(f"Sending {command}")
-                    await client.write_gatt_char(rx, command.encode(), response=False)
-                except IndexError:
-                    # Give control back to the event loop to allow other tasks to run
-                    await asyncio.sleep(0.01)
+                while True:
+                    # Check if there's a command in the queue without blocking
+                    try:
+                        command = self.queue.pop()
+                        if command == 'x':
+                            print('Quit requested')
+                            self.is_connected = False
+                            await client.disconnect()
+                            return
+                        print(f"Sending {command}")
+                        await client.write_gatt_char(rx, command.encode(), response=False)
+                    except IndexError:
+                        # Give control back to the event loop to allow other tasks to run
+                        await asyncio.sleep(0.01)
 
     def handle_disconnect(self, _: BleakClient):
         print("Device disconnected, goodbye.")
         self.is_connected = False
-        self.queue.append("x")
 
     def send(self, speed: int, dir: str):
         self.queue.append(f"{speed}{dir}")

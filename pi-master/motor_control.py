@@ -37,8 +37,8 @@ class MotorController:
             return  
         await self.connect()
 
-    async def handle_disconnect(self, _: BleakClient):
-        print("Device disconnected, retrying")
+    def handle_disconnect(self, _: BleakClient):
+        print(f"Device {self.device} disconnected, retrying")
         self.is_connected = False
 
     async def connect(self):
@@ -46,7 +46,7 @@ class MotorController:
             print(f'Connecting to {self.device.name}')
             async with BleakClient(self.device, disconnected_callback=self.handle_disconnect) as client:
                 try:
-                    client.connect()
+                    # client.connect()
                     print('Connected to rover')
                     self.is_connected = True
                     rover = client.services.get_service(UART_SERVICE_UUID)

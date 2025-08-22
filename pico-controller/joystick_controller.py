@@ -2,7 +2,7 @@ from machine import SoftI2C, Pin
 import joystick_2_unit
 import asyncio
 from urllib.urequest import urlopen
-from math import atan2, pi, floor
+from math import atan2, pi, floor, sqrt
 
 pi_by_8 = pi/8
 two_pi = 2*pi
@@ -84,7 +84,15 @@ class JoystickTracker:
         y = self.y_track.update( self.stick.get_y())
         if self.value_changed(x, y):
             print(f"check_stick({self.name}) found x={x} y={y}")
-            mag = ((abs(x) + abs(y)) // 60) * 30
+            r = sqrt(x*x + y*y)
+            if r < 15:
+                mag = 0
+            elif r < 30:
+                mag = 30
+            elif r < 60:
+                mag = 60
+            else:
+                mag = 95
             sector = to_sector(x, y)
             print(f"callback on {sector}:{mag}%")
             await self.callback(mag, sector)
@@ -97,7 +105,7 @@ class JoystickController:
         self.console = console
         self.left_stick = JoystickTracker("left", SCL_1, SDA_1, self.left_action)
         self.right_stick = JoystickTracker("right", SCL_2, SDA_2, self.right_action)
-        self.left_map = ["rl", "rl", "f", "f", "f", "f", "rl", "rl", "rl", "rl", "b", "b", "b", "b", "rl", "rl"]
+        self.left_map = ["rl", "rl", "f", "f", "f", "f", "rr", "rr", "rr", "rr", "b", "b", "b", "b", "rl", "rl"]
         self.right_map = ["sl", "dl", "dl", "f", "f", "dr", "dr", "sr", "sr", "Dr", "Dr", "b", "b", "Dl", "Dl", "sl"]
 
     async def left_action(self, mag, sector):
@@ -109,10 +117,13 @@ class JoystickController:
     async def notify(self, mag, code):
         print(f"notify called on {code}:{mag}%")
         await self.console.message(f"Joystick {code}:{mag}%")
-        try:
-            urlopen(self.rover + f"set-motor?s={mag}&dir={code}", data="", method ="POST").close()
-        except OSError:
-            await self.console.message("could not connect")
+        for retry in range(3):
+            try:
+                urlopen(self.rover + f"set-motor?s={mag}&dir={code}", data="", method ="POST").close()
+                return
+            except OSError:
+                await self.console.message(f"retrying connection {retry}")
+        await self.console.message("could not connect, giving up")
 
     async def watch_controls(self):
         while True:

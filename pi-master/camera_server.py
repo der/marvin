@@ -32,7 +32,7 @@ def initialize_camera():
     global camera
     try:
         camera = Picamera2()
-        config = camera.create_still_configuration(buffer_count=2, transform=Transform(vflip=True))
+        config = camera.create_still_configuration(buffer_count=2, transform=Transform(vflip=True, hflip=True))
         config["main"] = {'format': 'RGB888', 'size': (1024, 768), "preserve_ar": True}
         config["lores"] = {'format': 'RGB888', 'size': (320, 240), "preserve_ar": True}
         camera.configure(config)

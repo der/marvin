@@ -35,7 +35,7 @@ class MotorController:
             print('Device not found')
             sys.exit(1)
             return  
-        self.connect()
+        await self.connect()
 
     async def handle_disconnect(self, _: BleakClient):
         print("Device disconnected, retrying")

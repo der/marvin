@@ -17,6 +17,8 @@ from machine import ADC, Pin
 
 # Configuration
 ROVER="http://marvin.local:8080/"
+NETWORK="amberdown"
+PASSWORD="candleandthestar"
 
 # Font for CWriter
 import gui.fonts.freesans20 as font
@@ -278,7 +280,7 @@ class DisplayController:
 async def connect_network(console):
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    wlan.connect('marvin', 'marvin1234')
+    wlan.connect(NETWORK, PASSWORD)
 
     while not wlan.isconnected():
         await console.message("Waiting to connect")

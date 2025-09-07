@@ -61,6 +61,7 @@ class Motor(object):
         """
         if count is not None:
             self.countdown = 14 * count
+            self.counted_down = False
         else:
             self.countdown = None
 
@@ -183,6 +184,7 @@ class MotorControl:
     def set_motion(self, speed: int, dir: str, count: int|None = None):
         pattern = MOTOR_DECODE.get(dir) or [0,0,0,0]
         self.set_speed([x*speed for x in pattern])
+        print("setting speed:", [x*speed for x in pattern])
         self.set_countdown(count)
 
     def set_countdown(self, count: int):

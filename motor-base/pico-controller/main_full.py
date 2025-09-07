@@ -34,8 +34,8 @@ def command(cmdin):
 
         speed_setting = int(speed) if speed else 50
         motor_control.set_motion(speed_setting, command)
-        if countdown is not None:
-            motor_control.set_countdown(countdown)
+        if countdown:
+            motor_control.set_countdown(int(countdown))
         else:
             fail_safe_timer.start()
 

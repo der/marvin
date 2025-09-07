@@ -3,7 +3,7 @@ from time import sleep
 import uasyncio as asyncio
 from machine import Pin
 
-async def test(motor_control: MotorControl):
+async def test_async(motor_control: MotorControl):
     motor_control.set_all_speeds(20)
     await asyncio.sleep(3)
     motor_control.set_all_speeds(50)
@@ -15,14 +15,17 @@ async def test(motor_control: MotorControl):
     motor_control.set_all_speeds(0)
     await asyncio.sleep(3)
 
+async def test_forward_limit(motor_control: MotorControl):
+    motor_control.set_motion(50, "f", 100)
+    
 async def main():
     motor_control = MotorControl()
     asyncio.create_task(motor_control.pid_update_loop())
-    asyncio.create_task(test(motor_control))
+    asyncio.create_task(test_forward_limit(motor_control))
     while True:
         await asyncio.sleep(10)  # Yield control to the event loop
 
-# asyncio.run(main())
+asyncio.run(main())
 
 
 def test():
@@ -33,6 +36,7 @@ def test():
 
     print("Setting motor to 50%")
     motor.set_speed(50)
+    motor.set_countdown(5)
     sleep(5)
     
-test()
+# test()

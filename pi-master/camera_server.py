@@ -185,18 +185,18 @@ async def index():
 motor = MotorController()
 
 @app.post("/set-motor")
-async def set_motor(s: int, dir: str):
+async def set_motor(s: int, dir: str, dist: int = None):
     """
-    Set the speed and direction of the motor
-    Example: POST /set-motor?s=50&dir=f
+    Set the speed, direction and optional distance of the motor
+    Example: POST /set-motor?s=50&dir=f&dist=5
     """
     try:
         if motor.is_connected:
-            if dir == "s":
-                motor.queue.append(dir)
-            else:
-                motor.queue.append(f"{s}{dir}")
-            return {"status": "success", "message": f"Motor set to dir={dir}, speed={s}"}
+            command = "s" if dir == "s" else "{s}{dir}"
+            if dist is not None:
+                command += f"{dist}"
+            motor.queue.append(command)
+            return {"status": "success", "message": f"Motor set to dir={dir}, speed={s}, dist={dist}"}
         else:
             return {"status": "error", "message": "Motor base BLE connection not ready"}
     except Exception as e:

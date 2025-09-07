@@ -19,6 +19,8 @@ class Motor(object):
         self.pulse_total=0
         self.pulse_average=0
         self.pulse_last=0
+        self.countdown=None
+        self.counted_down=False
         pulse_pin.irq(self.pulse, Pin.IRQ_RISING | Pin.IRQ_FALLING, hard=True)
 
     def pulse(self, arg):
@@ -28,6 +30,12 @@ class Motor(object):
         else:
             self.pulse_total += ticks_diff(ticks_us(), self.pulse_last)
             self.pulse_count += 1
+            if self.countdown is not None:
+                self.countdown -= 1
+                if self.countdown == 0:
+                    self.set_speed(0)
+                    self.counted_down = True
+                    self.countdown = None
             if self.pulse_count >= self.average_over:
                 self.pulse_average = self.pulse_total // self.average_over
                 self.pulse_count = 0
@@ -45,6 +53,16 @@ class Motor(object):
         self.pwm.duty_u16(((100 - abs(speed)) * MAX_DUTY)//100)
         self.dir_pin.value(1 if speed > 0 else 0)
         self.pulse_average = 0
+
+    def set_countdown(self, count):
+        """
+           Set a distance limit in (approx) cmd based on pulse counting
+           Estmate about 14 pulses per cm
+        """
+        if count is not None:
+            self.countdown = 14 * count
+        else:
+            self.countdown = None
 
     def get_speed(self):
         if self.pulse_average == 0:
@@ -81,6 +99,9 @@ class MotorPID:
         self.reverse = speed < 0
         
     def update(self):
+        if self.motor.counted_down:
+            self.setpoint = 0
+            self.counted_down = False
         if self.setpoint == 0:
             self.motor.set_speed(0)
             return
@@ -159,9 +180,17 @@ class MotorControl:
         """
         self.set_speed([speed]*4)
         
-    def set_motion(self, speed: int, dir: str):
+    def set_motion(self, speed: int, dir: str, count: int|None = None):
         pattern = MOTOR_DECODE.get(dir) or [0,0,0,0]
         self.set_speed([x*speed for x in pattern])
+        self.set_countdown(count)
+
+    def set_countdown(self, count: int):
+        """
+        Limit the motion to (appox) the given number of cm
+        """
+        for motor in self.motors:
+            motor.motor.set_countdown(count)
 
     async def pid_update_loop(self):
         while True:

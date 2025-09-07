@@ -14,7 +14,8 @@ UART_TX_CHAR_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 class MotorController:
     """
         Drive motor base over BLE.
-        Send command strings in form "[n]c" where n, if present is speed between 0 and 100.
+        Send command strings in form "[s]op[d]" where s, if present is speed between 0 and 100,
+        d, if present, is a distance to travel in (approx) cm
         The commands are:
             - x           - exit controller and close bluetooth
             - f b sr sl   - forward/back/slide right/slide left

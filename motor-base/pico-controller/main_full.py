@@ -21,7 +21,7 @@ fail_safe_timer = ResettableTimer(3000, fail_safe)
 led = BatteryLed()
 monitor = BatteryMonitor(led, emergency)
 
-command_pattern = ure.compile(r"^(\d*)([A-Za-z]+)")
+command_pattern = ure.compile(r"^(\d*)([A-Za-z]+)(\d*)")
 
 def command(cmdin):
     cmd = cmdin.decode()
@@ -30,10 +30,14 @@ def command(cmdin):
     if match:
         speed = match.group(1)
         command = match.group(2)
+        countdown = match.group(3)
 
         speed_setting = int(speed) if speed else 50
         motor_control.set_motion(speed_setting, command)
-        fail_safe_timer.start()
+        if countdown is not None:
+            motor_control.set_countdown(countdown)
+        else:
+            fail_safe_timer.start()
 
 async def main():
     uart = BLEUart.BleUart("rover", command)

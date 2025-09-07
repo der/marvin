@@ -192,7 +192,7 @@ async def set_motor(s: int, dir: str, dist: int = None):
     """
     try:
         if motor.is_connected:
-            command = "s" if dir == "s" else "{s}{dir}"
+            command = "s" if dir == "s" else f"{s}{dir}"
             if dist is not None:
                 command += f"{dist}"
             motor.queue.append(command)

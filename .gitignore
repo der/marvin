@@ -2,3 +2,5 @@
 .micropico
 venv
 __pycache__
+*.ts
+*.pt

@@ -4,3 +4,6 @@ venv
 __pycache__
 *.ts
 *.pt
+*.torchscript
+*ncnn_model
+

@@ -1,20 +1,27 @@
-from ultralytics import YOLOE
+from ultralytics import YOLOE, YOLO
 import requests
 from io import BytesIO
 from PIL import Image
 import threading
 import cv2
 
-MODEL = "yoloe-v8s-seg"
+#MODEL_SRC = "yoloe-v8s-seg"
+#MODEL = "yoloe-v8s-seg_ncnn_model"
+
+MODEL_SRC = "yoloe-11s-seg"
+MODEL = "yoloe-11s-seg_ncnn_model"
 
 classes = [
     "person",
     "teddy bear",
     "balcony",
+    "bed",
+    "blinds",
     "book",
     "bookshelf",
     "chair",
     "coffee table",
+    "curtains",
     "door",
     "doorframe",
     "windowed door",
@@ -26,6 +33,8 @@ classes = [
     "cupboard",
     "stairs"
     "piano",
+    "mirror",
+    "laptop",
     "mouse",
     "keyboard"]
 
@@ -39,9 +48,18 @@ def get_object_model():
     global _model, _model_lock
     with _model_lock:
         if _model is None:
-            _model = YOLOE(MODEL)
-            _model.set_classes(classes, _model.get_text_pe(classes))
+            if "ncnn" in MODEL:
+                _model = YOLO(MODEL)
+            else:
+                _model = YOLOE(MODEL)
+                _model.set_classes(classes, _model.get_text_pe(classes))
     return _model
+
+def prep_ncnn():
+    model = YOLOE(MODEL_SRC)
+    model.set_classes(classes, model.get_text_pe(classes))
+    model.export(format="ncnn")
+
 
 def get_image() -> Image:
     try:

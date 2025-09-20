@@ -6,7 +6,7 @@ import cv2
 def main():
     window = "Detections"
     cv2.namedWindow(window, cv2.WINDOW_NORMAL)
-    cvs.waitKey(10)
+    cv2.waitKey(10)
     while True:
         image = get_image()
         show_detections(image, window)

@@ -3,6 +3,7 @@ import requests
 from io import BytesIO
 from PIL import Image
 import threading
+import cv2
 
 MODEL = "yoloe-v8s-seg"
 
@@ -79,7 +80,7 @@ def detect_class(cls:str, image:Image = None) -> None|int:
     else:
         return None
 
-def show_detections(image:Image = None):
+def show_detections(image:Image = None, window="Detections") -> None:
     """
        Debugging aid - shows all detected classes as an overlay image
     """
@@ -87,4 +88,6 @@ def show_detections(image:Image = None):
     if image is None:
         image = get_image()
     result = model.predict(image)[0]
-    result.show()
+    annotated_frame = result.plot()
+    cv2.imshow(window, annotated_frame)
+    cv2.waitKey(10)    

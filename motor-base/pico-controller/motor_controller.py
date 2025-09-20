@@ -188,7 +188,7 @@ class MotorControl:
         speed = 0
         for m in self.motors:
             speed = max(speed, abs(m.get_speed()))
-        return speed
+        return speed == 0
         
     def set_motion(self, speed: int, dir: str, count: int|None = None):
         pattern = MOTOR_DECODE.get(dir) or [0,0,0,0]

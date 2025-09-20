@@ -39,6 +39,7 @@ class BleUart:
                 if data and self._callback:
                     rtn = self._callback(data)
                     if rtn is not None:
+                        print("Sending back", rtn)
                         self.send(rtn)
             except asyncio.TimeoutError:
                 print('no data yet ...')

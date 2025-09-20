@@ -21,7 +21,7 @@ fail_safe_timer = ResettableTimer(3000, fail_safe)
 led = BatteryLed()
 monitor = BatteryMonitor(led, emergency)
 
-command_pattern = ure.compile(r"^(\d*)([A-Za-z]+)(\d*)")
+command_pattern = ure.compile(r"^(\d*)([A-Za-z?]+)(\d*)")
 
 def command(cmdin):
     cmd = cmdin.decode()
@@ -32,7 +32,7 @@ def command(cmdin):
         command = match.group(2)
         countdown = match.group(3)
         
-        if command == "?":
+        if command == '?':
             if motor_control.is_stopped():
                 return b'0'
             else:

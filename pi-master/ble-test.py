@@ -47,11 +47,14 @@ async def ble_connect(task):
                     if command == b'x':
                         print('Quit requested')
                         break                    
-                    await client.write_gatt_char(rx, command, response=False)
                     if command == b'?':
+                        await client.write_gatt_char(rx, command, response=True)
                         # Read response from TX characteristic
                         response = await client.read_gatt_char(tx)
+                        print(f"Raw response: {response}")
                         print(f"Response: {response.decode().strip()}")
+                    else:
+                        await client.write_gatt_char(rx, command, response=False)
                 else:
                     # Give control back to the event loop to allow other tasks to run
                     await asyncio.sleep(0.1)

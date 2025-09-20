@@ -21,12 +21,14 @@ class MotorController:
             - f b sr sl   - forward/back/slide right/slide left
             - dr dl Dr Dl - diagonal right/left forward/back
             - tr tl Tr Tl - turn right/left turn back right/left
-            - rr rl       - rotate right or left
+            - rr rl       - rot                            await client.write_gatt_char(rx, command, response=False)                            
+ate right or left
             - s           - stop
+            - ?           - status request, returns 1 if moving, 0 if stopped
     """
     def __init__(self):
         # Short length queue of commands to send
-        self.queue = deque([], 2)
+        self.queue = deque([], 4)
         self.is_connected = False
         
     async def run(self):
@@ -40,6 +42,7 @@ class MotorController:
 
     def handle_disconnect(self, _: BleakClient):
         print(f"Device {self.device} disconnected, retrying")
+        self.client = None
         self.is_connected = False
 
     async def connect(self):
@@ -50,8 +53,10 @@ class MotorController:
                     # client.connect()
                     print('Connected to rover')
                     self.is_connected = True
+                    self.client = client
                     rover = client.services.get_service(UART_SERVICE_UUID)
-                    rx = rover.get_characteristic(UART_RX_CHAR_UUID)
+                    self.rx = rover.get_characteristic(UART_RX_CHAR_UUID)
+                    self.tx = rover.get_characteristic(UART_TX_CHAR_UUID)
 
                     while self.is_connected:
                         # Check if there's a command in the queue without blocking
@@ -59,16 +64,26 @@ class MotorController:
                             command = self.queue.pop()
                             if command == 'x':
                                 print('Quit requested')
+                                self.client = None
                                 self.is_connected = False
                                 await client.disconnect()
                                 return
                             print(f"Sending {command}")
-                            await client.write_gatt_char(rx, command.encode(), response=False)
+                            await client.write_gatt_char(self.rx, command.encode(), response=False)
                         except IndexError:
                             # Give control back to the event loop to allow other tasks to run
                             await asyncio.sleep(0.01)
                 except Exception as e:
                     print(e)
+
+    async def is_moving(self):
+        if self.is_connected and self.client is not None:
+            await self.client.write_gatt_char(self.rx, b'?', response=True)
+            response = await self.client.read_gatt_char(self.tx)
+            if response is not None and response.decode().strip() == '1':
+                return True
+            else:
+                return False
 
     def send(self, speed: int, dir: str):
         self.queue.append(f"{speed}{dir}")

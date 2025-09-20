@@ -201,6 +201,18 @@ async def set_motor(s: int, dir: str, dist: int = None):
             return {"status": "error", "message": "Motor base BLE connection not ready"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    
+@app.get("/is-moving")
+async def is_moving():
+    """Check if the motor is currently moving."""
+    try:
+        if motor.is_connected:
+            moving = await motor.is_moving()
+            return {"status": "success", "moving": moving}
+        else:
+            return {"status": "error", "message": "Motor base BLE connection not ready"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 async def startup():
     """Initialize camera and start frame capture thread on startup."""

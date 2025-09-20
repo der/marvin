@@ -3,7 +3,8 @@ import requests
 from io import BytesIO
 from PIL import Image
 import threading
-import time
+
+MODEL = "yoloe-v8s-seg"
 
 classes = [
     "person",
@@ -37,7 +38,7 @@ def get_object_model():
     global _model, _model_lock
     with _model_lock:
         if _model is None:
-            _model = YOLOE("yoloe-11l-seg.pt")
+            _model = YOLOE(MODEL)
             _model.set_classes(classes, _model.get_text_pe(classes))
     return _model
 

@@ -70,10 +70,13 @@ async def send(cmd):
 async def dance():
     print("Dance called")
     await send(b'f')
-    await send(b'sr')
-    await send(b'b')
-    await send(b'sl')
-    await send(b'99f')
+    await send(b'?')
+    await asyncio.sleep(0.5)
+    await send(b'?')
+#    await send(b'sr')
+#    await send(b'b')
+#    await send(b'sl')
+#    await send(b'99f')
     await send(b'x')
 
 async def main():

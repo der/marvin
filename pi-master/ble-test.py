@@ -33,6 +33,7 @@ async def ble_connect(task):
         print('Connected to rover')
         rover = client.services.get_service(UART_SERVICE_UUID)
         rx = rover.get_characteristic(UART_RX_CHAR_UUID)
+        tx = rover.get_characteristic(UART_TX_CHAR_UUID)
 
         print("Starting task")
         asyncio.create_task(task())
@@ -45,8 +46,12 @@ async def ble_connect(task):
                     command = queue.get_nowait()
                     if command == b'x':
                         print('Quit requested')
-                        break
+                        break                    
                     await client.write_gatt_char(rx, command, response=False)
+                    if command == b'?':
+                        # Read response from TX characteristic
+                        response = await client.read_gatt_char(tx)
+                        print(f"Response: {response.decode().strip()}")
                 else:
                     # Give control back to the event loop to allow other tasks to run
                     await asyncio.sleep(0.1)

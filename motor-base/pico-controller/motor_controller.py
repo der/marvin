@@ -99,6 +99,9 @@ class MotorPID:
         self.setpoint = abs(speed)
         self.reverse = speed < 0
         
+    def get_speed(self):
+        return self.motor.speed
+    
     def update(self):
         if self.motor.counted_down:
             self.setpoint = 0
@@ -180,6 +183,12 @@ class MotorControl:
         Set the speed of all motors to the same value.
         """
         self.set_speed([speed]*4)
+        
+    def is_stopped(self):
+        speed = 0
+        for m in self.motors:
+            speed = max(speed, abs(m.get_speed()))
+        return speed
         
     def set_motion(self, speed: int, dir: str, count: int|None = None):
         pattern = MOTOR_DECODE.get(dir) or [0,0,0,0]

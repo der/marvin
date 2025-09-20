@@ -37,7 +37,9 @@ class BleUart:
             try:
                 connection, data = await self._read.written()
                 if data and self._callback:
-                    self._callback(data)
+                    rtn = self._callback(data)
+                    if rtn is not None:
+                        self.send(rtn)
             except asyncio.TimeoutError:
                 print('no data yet ...')
             

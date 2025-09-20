@@ -31,13 +31,19 @@ def command(cmdin):
         speed = match.group(1)
         command = match.group(2)
         countdown = match.group(3)
-
+        
+        if command == "?":
+            if motor_control.is_stopped():
+                return b'0'
+            else:
+                return b'1'
         speed_setting = int(speed) if speed else 50
         motor_control.set_motion(speed_setting, command)
         if countdown:
             motor_control.set_countdown(int(countdown))
         else:
             fail_safe_timer.start()
+        return None
 
 async def main():
     uart = BLEUart.BleUart("rover", command)

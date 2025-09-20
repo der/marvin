@@ -8,9 +8,11 @@ import time
 classes = [
     "person",
     "teddy bear",
+    "balcony",
     "book",
     "bookshelf",
     "chair",
+    "coffee table",
     "door",
     "doorframe",
     "windowed door",

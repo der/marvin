@@ -3,7 +3,7 @@ from object_detect import detect_class
 from motor_control import rotate_by, move, move_and_stop
 from subprocess import Popen
 
-WIDTH_TRESHHOLD = 0.08  # Width of object to stop at
+WIDTH_TRESHHOLD = 0.05  # Width of object to stop at
 
 def say(text: str):
     Popen(["flite_cmu_us_rms", "-t", text])
@@ -17,23 +17,23 @@ def check_for(cls):
 
 def find_object(cls):
     say(f"Looking for {cls}")
-    while True:
-        for iter in range(10):
+    for iter in range(10):
+        detection = check_for(cls)
+        if detection is not None:
+            say(f"Spotted a {cls}")
+            offset = detection['offset']
+            rotate_by(offset)
             detection = check_for(cls)
-            if detection is not None:
-                say(f"Spotted a {cls}")
-                offset = detection['offset']
-                rotate_by(offset)
-                detection = check_for(cls)
-                if detection is not None and detection["width"] < WIDTH_TRESHHOLD:
-                    say(f"Moving closer to the {cls}")
-                    move_to(cls)
-                break
-            else:
-                move_and_stop("rr", 40, 15)
-                # wait for image to stabilise before checking again
-                time.sleep(0.3)
-        say(f"Couldn't find a {cls}")    
+            if detection is None:
+                continue
+            if detection["width"] < WIDTH_TRESHHOLD:
+                say(f"Moving closer to the {cls}")
+                return move_to(cls)
+            return True
+        else:
+            move_and_stop("rr", 40, 15)
+            # wait for image to stabilise before checking again
+            time.sleep(0.3)
 
 def move_to(cls):
     for iter in range(10):
@@ -56,4 +56,13 @@ def move_to(cls):
             return False
     return False
 
-find_object("teddy bear")
+def track_object(cls):
+    while True:
+        found = find_object(cls)
+        if not found:
+            say(f"Couldn't find a {cls}")
+        else:
+            while check_for(cls) is not None:
+                time.sleep(2)
+
+track_object("teddy bear")

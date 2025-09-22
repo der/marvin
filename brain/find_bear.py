@@ -28,7 +28,7 @@ def find_object(cls):
                 if detection is not None and detection["width"] < WIDTH_TRESHHOLD:
                     say(f"Moving closer to the {cls}")
                     move_to(cls)
-                return True
+                break
             else:
                 move_and_stop("rr", 40, 15)
                 # wait for image to stabilise before checking again

@@ -3,7 +3,7 @@ from object_detect import detect_class
 from motor_control import rotate_by, move, move_and_stop
 from subprocess import Popen
 
-WIDTH_TRESHHOLD = 0.05  # Width of object to stop at
+WIDTH_TRESHHOLD = 0.2  # Width of object to stop at
 OFFSET_THRESHOLD = 0.02
 
 def say(text: str):

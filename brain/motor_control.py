@@ -1,6 +1,9 @@
 import requests
+from time import sleep
 
-MARVIN_MOTOR = "http://marvin.local:8080/set-motor"
+MARVIN_BASE = "http://marvin.local:8080"
+MARVIN_MOTOR = f"{MARVIN_BASE}/set-motor"
+MARVIN_IS_MOVING = f"{MARVIN_BASE}/is-moving"
 
 def move(dir="f", speed:int=50, distance: int|None=None):
     print(f"Move requested {speed} {dir} by {distance}")
@@ -18,6 +21,19 @@ def move(dir="f", speed:int=50, distance: int|None=None):
     if (response.status_code != 200):
         print(f"Request failed [{response.status_code}] {response.text}")
     return 
+
+def is_moving() -> bool:
+    response = requests.get(MARVIN_IS_MOVING)
+    if (response.status_code != 200):
+        print(f"Request failed [{response.status_code}] {response.text}")
+        return False
+    j = response.json()
+    return j.get("status") == "success" and j.get("moving")
+
+def move_and_stop(dir="f", speed:int=50, distance: int|None=None):
+    move(dir, speed, distance)
+    while is_moving():
+        sleep(0.1)
 
 OFFSET_SCALE=10
 

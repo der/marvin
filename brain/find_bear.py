@@ -8,14 +8,15 @@ def say(text: str):
 
 def find_object(cls):
     say(f"Looking for {cls}")
+    time.sleep(2)
     for iter in range(10):
         detection = detect_class(cls)
         if detection is not None:
             say(f"Spotted a {cls}")
+            time.sleep(2)
             offset = detection['offset']
             rotate_by(offset)
             move_to(cls)
-            say(f"Hello {cls}")
             return True
         else:
             move_and_stop("rr", 40, 15)

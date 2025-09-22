@@ -195,6 +195,8 @@ async def set_motor(s: int, dir: str, dist: int = None):
             command = "s" if dir == "s" else f"{s}{dir}"
             if dist is not None:
                 command += f"{dist}"
+            else:
+                command += 99
             motor.queue.append(command)
             return {"status": "success", "message": f"Motor set to dir={dir}, speed={s}, dist={dist}"}
         else:

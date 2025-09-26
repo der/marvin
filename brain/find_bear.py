@@ -57,7 +57,7 @@ def move_to(cls):
             if abs(offset) > 0.1:
                 rotate_by(offset)
             elif width < WIDTH_TRESHHOLD:
-                move_and_stop("f", 40, 15)
+                move_and_stop("f", 40, 25)
             else:
                 if iter > 0:
                     say(f"That's close enough")

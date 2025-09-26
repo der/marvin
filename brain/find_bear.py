@@ -3,8 +3,8 @@ from object_detect import detect_class
 from motor_control import rotate_by, move, move_and_stop
 from subprocess import Popen
 
-WIDTH_TRESHHOLD = 0.2  # Width of object to stop at
-OFFSET_THRESHOLD = 0.02
+WIDTH_TRESHHOLD = 0.4  # Width of object to stop at
+OFFSET_THRESHOLD = 0.05
 
 def say(text: str):
     Popen(["flite_cmu_us_rms", "-t", text])
@@ -31,7 +31,7 @@ def find_object(cls):
         else:
             move_and_stop("rr", 40, 15)
             # wait for image to stabilise before checking again
-            time.sleep(0.3)
+            time.sleep(0.5)
 
 def centre_on(cls):
     for iter in range(10):

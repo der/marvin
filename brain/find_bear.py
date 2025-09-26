@@ -4,7 +4,7 @@ from motor_control import rotate_by, move, move_and_stop
 from subprocess import Popen
 
 WIDTH_TRESHHOLD = 0.4  # Width of object to stop at
-OFFSET_THRESHOLD = 0.05
+OFFSET_THRESHOLD = 0.1
 
 def say(text: str):
     Popen(["flite_cmu_us_rms", "-t", text])

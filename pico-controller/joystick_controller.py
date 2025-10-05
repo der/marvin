@@ -119,7 +119,7 @@ class JoystickController:
         await self.console.message(f"Joystick {code}:{mag}%")
         for retry in range(3):
             try:
-                urlopen(self.rover + f"set-motor?s={mag}&dir={code}", data="", method ="POST").close()
+                urlopen(self.rover + f"set-motor?s={mag}&dir={code}&dist=99", data="", method ="POST").close()
                 return
             except OSError:
                 await self.console.message(f"retrying connection {retry}")

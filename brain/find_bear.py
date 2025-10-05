@@ -54,7 +54,7 @@ def move_to(cls):
             offset = detection['offset']
             width = detection['width']
             print(f"found {cls} with offset {offset:.3f} and width {width:.3f}")
-            if abs(offset) > 0.1:
+            if abs(offset) > OFFSET_THRESHOLD:
                 rotate_by(offset)
             elif width < WIDTH_TRESHHOLD:
                 move_and_stop("f", 40, 25)

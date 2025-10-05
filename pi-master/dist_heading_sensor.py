@@ -25,11 +25,11 @@ class DistanceHeadingMonitor:
         if (self.device is None):
             print('Device not found')
             sys.exit(1)
-            return  
+            return
         await self.connect()
 
     def uart_data_handler(self, sender, data):
-        print(f'Received {data}')
+        print(f'Received {list(data)}')
 
     def handle_disconnect(self, _: BleakClient):
         print(f"Device {self.device} disconnected, retrying")
@@ -59,7 +59,7 @@ async def main():
     sensor = DistanceHeadingMonitor()
 
     tasks = [
-        asyncio.create_task(sensor.run)
+        asyncio.create_task(sensor.run())
     ]
     # Wait for everything to finish
     await asyncio.gather(*tasks)

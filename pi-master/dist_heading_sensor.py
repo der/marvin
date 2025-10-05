@@ -18,6 +18,7 @@ class DistanceHeadingMonitor:
         self.dist= [255, 255, 255]
         self.heading = 0
         self.pitch = 0
+        print(f"Heading: {self.heading}")
 
     async def run(self):
         print('Scanning for devices...')

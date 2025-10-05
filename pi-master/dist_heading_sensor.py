@@ -53,4 +53,15 @@ class DistanceHeadingMonitor:
                             # Give control back to the event loop to allow other tasks to run
                             await asyncio.sleep(0.01)
                 except Exception as e:
-                    print(e)        
+                    print(e)
+
+async def main():
+    sensor = DistanceHeadingMonitor()
+
+    tasks = [
+        asyncio.create_task(sensor.run)
+    ]
+    # Wait for everything to finish
+    await asyncio.gather(*tasks)
+
+asyncio.run(main())

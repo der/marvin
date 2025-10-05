@@ -18,7 +18,6 @@ class DistanceHeadingMonitor:
         self.dist= [255, 255, 255]
         self.heading = 0
         self.pitch = 0
-        print(f"Heading: {self.heading}")
 
     async def run(self):
         print('Scanning for devices...')
@@ -30,7 +29,11 @@ class DistanceHeadingMonitor:
         await self.connect()
 
     def uart_data_handler(self, sender, data):
-        print(f'Received {list(data)}')
+        unpacked = list(data)
+        self.dist = unpacked[0:3]
+        self.heading = unpacked[3]
+        self.pitch = unpacked[4]
+        print(f"Heading: {self.heading}, pitch: {self.pitch}, dist: {self.dist}")
 
     def handle_disconnect(self, _: BleakClient):
         print(f"Device {self.device} disconnected, retrying")

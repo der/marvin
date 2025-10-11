@@ -40,6 +40,25 @@ ate right or left
                 sys.exit(1)
                 return
             await self.connect()
+        while True:
+            while self.is_connected:
+                # Check if there's a command in the queue without blocking
+                try:
+                    command = self.queue.pop()
+                    if command == 'x':
+                        print('Quit requested')
+                        self.client = None
+                        self.is_connected = False
+                        await self.client.disconnect()
+                        return
+                    print(f"Sending {command}")
+                    await self.client.write_gatt_char(self.rx, command.encode(), response=False)
+                except IndexError:
+                    # Give control back to the event loop to allow other tasks to run
+                    await asyncio.sleep(0.01)
+            # Disconnected, try to reconnect
+            async with lock:
+                await self.connect()           
 
     def handle_disconnect(self, _: BleakClient):
         print(f"Device {self.device} disconnected, retrying")
@@ -47,35 +66,18 @@ ate right or left
         self.is_connected = False
 
     async def connect(self):
-        while True:
-            print(f'Connecting to {self.device.name}')
-            async with BleakClient(self.device, disconnected_callback=self.handle_disconnect) as client:
-                try:
-                    # client.connect()
-                    print('Connected to rover')
-                    self.is_connected = True
-                    self.client = client
-                    rover = client.services.get_service(UART_SERVICE_UUID)
-                    self.rx = rover.get_characteristic(UART_RX_CHAR_UUID)
-                    self.tx = rover.get_characteristic(UART_TX_CHAR_UUID)
-
-                    while self.is_connected:
-                        # Check if there's a command in the queue without blocking
-                        try:
-                            command = self.queue.pop()
-                            if command == 'x':
-                                print('Quit requested')
-                                self.client = None
-                                self.is_connected = False
-                                await client.disconnect()
-                                return
-                            print(f"Sending {command}")
-                            await client.write_gatt_char(self.rx, command.encode(), response=False)
-                        except IndexError:
-                            # Give control back to the event loop to allow other tasks to run
-                            await asyncio.sleep(0.01)
-                except Exception as e:
-                    print(e)
+        print(f'Connecting to {self.device.name}')
+        async with BleakClient(self.device, disconnected_callback=self.handle_disconnect) as client:
+            try:
+                # client.connect()
+                print('Connected to rover')
+                self.is_connected = True
+                self.client = client
+                rover = client.services.get_service(UART_SERVICE_UUID)
+                self.rx = rover.get_characteristic(UART_RX_CHAR_UUID)
+                self.tx = rover.get_characteristic(UART_TX_CHAR_UUID)
+            except Exception as e:
+                print(e)
 
     async def is_moving(self):
         if self.is_connected and self.client is not None:

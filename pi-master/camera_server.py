@@ -185,7 +185,7 @@ async def index():
 motor = MotorController()
 
 @app.post("/set-motor")
-async def set_motor(s: int, dir: str, dist: int = None):
+async def set_motor(s: int, dir: str, dist: int = None, sync: bool = False):
     """
     Set the speed, direction and optional distance of the motor
     Example: POST /set-motor?s=50&dir=f&dist=5
@@ -198,6 +198,10 @@ async def set_motor(s: int, dir: str, dist: int = None):
             else:
                 command += 99
             motor.queue.append(command)
+            if sync:
+                await asyncio.sleep(0.05)
+                while await motor.is_moving():
+                    await asyncio.sleep(0.1)
             return {"status": "success", "message": f"Motor set to dir={dir}, speed={s}, dist={dist}"}
         else:
             return {"status": "error", "message": "Motor base BLE connection not ready"}
@@ -233,6 +237,7 @@ async def startup():
 
 async def shutdown():
     """Release camera resources on shutdown."""
+    global stream_active
     stream_active = False
     if camera is not None:
         camera.stop()

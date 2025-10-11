@@ -33,7 +33,7 @@ ate right or left
         
     async def run(self, lock):
         print('Scanning for devices...')
-        with lock:
+        async with lock:
             self.device = await BleakScanner.find_device_by_name('rover', 36000.0)
             if (self.device is None):
                 print('Device not found')

@@ -19,14 +19,15 @@ class DistanceHeadingMonitor:
         self.heading = 0
         self.pitch = 0
 
-    async def run(self):
+    async def run(self, lock):
         print('Scanning for devices...')
-        self.device = await BleakScanner.find_device_by_name(DEVICE_NAME, 36000.0)
-        if (self.device is None):
-            print('Device not found')
-            sys.exit(1)
-            return
-        await self.connect()
+        with lock:
+            self.device = await BleakScanner.find_device_by_name(DEVICE_NAME, 36000.0)
+            if (self.device is None):
+                print('Device not found')
+                sys.exit(1)
+                return
+            await self.connect()
 
     def uart_data_handler(self, sender, data):
         unpacked = list(data)

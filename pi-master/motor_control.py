@@ -31,14 +31,15 @@ ate right or left
         self.queue = deque([], 4)
         self.is_connected = False
         
-    async def run(self):
+    async def run(self, lock):
         print('Scanning for devices...')
-        self.device = await BleakScanner.find_device_by_name('rover', 36000.0)
-        if (self.device is None):
-            print('Device not found')
-            sys.exit(1)
-            return  
-        await self.connect()
+        with lock:
+            self.device = await BleakScanner.find_device_by_name('rover', 36000.0)
+            if (self.device is None):
+                print('Device not found')
+                sys.exit(1)
+                return
+            await self.connect()
 
     def handle_disconnect(self, _: BleakClient):
         print(f"Device {self.device} disconnected, retrying")

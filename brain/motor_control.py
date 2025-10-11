@@ -5,13 +5,14 @@ MARVIN_BASE = "http://marvin.local:8080"
 MARVIN_MOTOR = f"{MARVIN_BASE}/set-motor"
 MARVIN_IS_MOVING = f"{MARVIN_BASE}/is-moving"
 
-def move(dir="f", speed:int=50, distance: int|None=None):
+def move(dir="f", speed:int=50, distance: int|None=None, sync: bool = False):
     print(f"Move requested {speed} {dir} by {distance}")
     if distance is not None:
         response = requests.post(MARVIN_MOTOR, params={
             "dir": dir,
             "s": str(speed),
-            "dist": str(distance)
+            "dist": str(distance),
+            "sync": str(sync)
         })
     else:
         response = requests.post(MARVIN_MOTOR, params={
@@ -31,9 +32,7 @@ def is_moving() -> bool:
     return j.get("status") == "success" and j.get("moving")
 
 def move_and_stop(dir="f", speed:int=50, distance: int|None=None):
-    move(dir, speed, distance)
-    while is_moving():
-        sleep(0.1)
+    move(dir, speed, distance, True)
 
 OFFSET_SCALE=10
 
@@ -45,4 +44,4 @@ def rotate_by(offset: float):
     if dist == 0:
         move("s", 0)
     else:
-        move("rl" if offset < 0 else "rr", 50, dist)
+        move("rl" if offset < 0 else "rr", 50, dist, True)

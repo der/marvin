@@ -14,6 +14,7 @@ import uvicorn
 from contextlib import asynccontextmanager
 import zlib
 from motor_control import MotorController
+from dist_heading_sensor import DistanceHeadingMonitor
 
 # Configuration
 HOST = "0.0.0.0"  # Allow access from any device on the network
@@ -27,14 +28,17 @@ latest_lores = None
 latest_frame = None
 stream_active = True
 
+
 def initialize_camera():
     """Initialize the camera."""
     global camera
     try:
         camera = Picamera2()
-        config = camera.create_still_configuration(buffer_count=2, transform=Transform(vflip=True, hflip=True))
-        config["main"] = {'format': 'RGB888', 'size': (1024, 768), "preserve_ar": True}
-        config["lores"] = {'format': 'RGB888', 'size': (320, 240), "preserve_ar": True}
+        config = camera.create_still_configuration(
+            buffer_count=2, transform=Transform(vflip=True, hflip=True)
+        )
+        config["main"] = {"format": "RGB888", "size": (1024, 768), "preserve_ar": True}
+        config["lores"] = {"format": "RGB888", "size": (320, 240), "preserve_ar": True}
         camera.configure(config)
 
         # To do, set up sizes and lores
@@ -46,10 +50,11 @@ def initialize_camera():
         print(f"Error initializing camera: {e}")
         return False
 
+
 def capture_frames():
     """Continuously capture frames from the camera."""
     global latest_lores, latest_frame, stream_active
-    
+
     while stream_active:
         (main, lores), metadata = camera.capture_arrays(["main", "lores"])
         if lores is not None:
@@ -58,6 +63,7 @@ def capture_frames():
                 latest_frame = copy(main)
                 latest_lores = copy(lores)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await startup()
@@ -65,7 +71,9 @@ async def lifespan(app: FastAPI):
     # Clean up the ML models and release the resources
     await shutdown()
 
+
 app = FastAPI(title="Pi Rover Camera Server", lifespan=lifespan)
+
 
 def generate_frames() -> Iterator[bytes]:
     """Generate frames for the multipart response."""
@@ -74,35 +82,39 @@ def generate_frames() -> Iterator[bytes]:
         if latest_lores is None:
             time.sleep(0.01)
             continue
-            
+
         # Get the current frame
         with frame_lock:
-            ret, jpeg = cv2.imencode('.jpg', latest_lores, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
+            ret, jpeg = cv2.imencode(
+                ".jpg", latest_lores, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]
+            )
             if ret:
                 # Convert the frame to bytes
                 frame_data = jpeg.tobytes()
 
         # Yield the frame in the format expected by multipart responses
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n')
+        yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame_data + b"\r\n")
+
 
 @app.get("/stream")
 async def stream():
     """Stream the camera feed as multipart/x-mixed-replace content."""
     return StreamingResponse(
-        generate_frames(),
-        media_type="multipart/x-mixed-replace; boundary=frame"
+        generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
 
 @app.get("/still")
 async def still():
     """Single high-res image."""
     return await response_for(latest_frame)
 
+
 @app.get("/still-lores")
 async def still_lores():
     """Single log-res image."""
     return await response_for(latest_lores)
+
 
 @app.get("/still-565")
 async def still_565():
@@ -112,25 +124,33 @@ async def still_565():
 
     with frame_lock:
         # Convert the frame to RGB565 format
-        rgb565_frame = frame.astype('uint16')
+        rgb565_frame = frame.astype("uint16")
         # Implicit RGB to BGR via swapping suffixes instead of using cvtColor
-        rgb565_frame = ((rgb565_frame[:, :, 2] >> 3) << 11) | ((rgb565_frame[:, :, 1] >> 2) << 5) | (rgb565_frame[:, :, 0] >> 3)
+        rgb565_frame = (
+            ((rgb565_frame[:, :, 2] >> 3) << 11)
+            | ((rgb565_frame[:, :, 1] >> 2) << 5)
+            | (rgb565_frame[:, :, 0] >> 3)
+        )
         # Swap the bytes to big-endian format
         rgb565_bytes = rgb565_frame.byteswap().tobytes()
         # Compress the RGB565 data using zlib
         compressed_data = zlib.compress(rgb565_bytes)
     return Response(content=compressed_data, media_type="application/octet-stream")
-    
+
+
 async def response_for(frame):
     if frame is None:
         return Response(content="No image available", media_type="text/plain")
 
     with frame_lock:
-        ret, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
+        ret, jpeg = cv2.imencode(
+            ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]
+        )
         if ret:
             return Response(content=jpeg.tobytes(), media_type="image/jpeg")
         else:
             return Response(content="Failed to encode image", media_type="text/plain")
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -182,7 +202,9 @@ async def index():
     """
     return HTMLResponse(content=html_content)
 
+
 motor = MotorController()
+
 
 @app.post("/set-motor")
 async def set_motor(s: int, dir: str, dist: int = None, sync: bool = False):
@@ -202,12 +224,16 @@ async def set_motor(s: int, dir: str, dist: int = None, sync: bool = False):
                 await asyncio.sleep(0.05)
                 while await motor.is_moving():
                     await asyncio.sleep(0.1)
-            return {"status": "success", "message": f"Motor set to dir={dir}, speed={s}, dist={dist}"}
+            return {
+                "status": "success",
+                "message": f"Motor set to dir={dir}, speed={s}, dist={dist}",
+            }
         else:
             return {"status": "error", "message": "Motor base BLE connection not ready"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-    
+
+
 @app.get("/is-moving")
 async def is_moving():
     """Check if the motor is currently moving."""
@@ -217,6 +243,25 @@ async def is_moving():
             return {"status": "success", "moving": moving}
         else:
             return {"status": "error", "message": "Motor base BLE connection not ready"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+sensor = DistanceHeadingMonitor()
+
+@app.get("/sensor-status")
+async def sensor_status():
+    """Get the current sensor status."""
+    try:
+        if sensor.is_connected:
+            status = {
+                "heading": sensor.heading,
+                "pitch": sensor.pitch,
+                "distance" : sensor.dist,
+            }
+            return {"status": "success", "sensor_status": status}
+        else:
+            return {"status": "error", "message": "Sensor connection not ready"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -233,6 +278,9 @@ async def startup():
     # Start BLE connection listener
     print("Starting BLE connection to motor base in background")
     asyncio.create_task(motor.run())
+    # Start sensor listener
+    print("Starting sensor listener")
+    asyncio.create_task(sensor.run())
 
 
 async def shutdown():
@@ -245,6 +293,7 @@ async def shutdown():
     if motor.is_connected:
         motor.shutdown()
 
+
 def main():
     """Main function to start the FastAPI server with Uvicorn."""
     try:
@@ -253,6 +302,7 @@ def main():
         uvicorn.run(app, host=HOST, port=PORT)
     except KeyboardInterrupt:
         print("\nShutting down...")
+
 
 if __name__ == "__main__":
     main()

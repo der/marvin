@@ -68,4 +68,5 @@ async def main():
     # Wait for everything to finish
     await asyncio.gather(*tasks)
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

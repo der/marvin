@@ -67,17 +67,16 @@ ate right or left
 
     async def connect(self):
         print(f'Connecting to {self.device.name}')
-        async with BleakClient(self.device, disconnected_callback=self.handle_disconnect) as client:
-            try:
-                # client.connect()
-                print('Connected to rover')
-                self.is_connected = True
-                self.client = client
-                rover = client.services.get_service(UART_SERVICE_UUID)
-                self.rx = rover.get_characteristic(UART_RX_CHAR_UUID)
-                self.tx = rover.get_characteristic(UART_TX_CHAR_UUID)
-            except Exception as e:
-                print(e)
+        client = BleakClient(self.device, disconnected_callback=self.handle_disconnect)
+        try:
+            print('Connected to rover')
+            self.is_connected = True
+            self.client = client
+            rover = client.services.get_service(UART_SERVICE_UUID)
+            self.rx = rover.get_characteristic(UART_RX_CHAR_UUID)
+            self.tx = rover.get_characteristic(UART_TX_CHAR_UUID)
+        except Exception as e:
+            print(e)
 
     async def is_moving(self):
         if self.is_connected and self.client is not None:

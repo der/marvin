@@ -277,11 +277,10 @@ async def startup():
     print("Camera capture thread started.")
     # Start BLE connection listener
     print("Starting BLE connection to motor base in background")
-    lock = asyncio.Lock()
-    asyncio.create_task(motor.run(lock))
+    asyncio.create_task(motor.run())
     # Start sensor listener
     print("Starting sensor listener")
-    asyncio.create_task(sensor.run(lock))
+    asyncio.create_task(sensor.run())
 
 
 async def shutdown():

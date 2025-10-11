@@ -19,20 +19,14 @@ class DistanceHeadingMonitor:
         self.heading = 0
         self.pitch = 0
 
-    async def run(self, lock):
+    async def run(self):
         print('Scanning for devices...')
-        async with lock:
-            self.device = await BleakScanner.find_device_by_name(DEVICE_NAME, 36000.0)
-            if (self.device is None):
-                print('Device not found')
-                sys.exit(1)
-                return
-            await self.connect()
-        while True:
-            if not self.is_connected:
-                async with lock:
-                    await self.connect()
-            await asyncio.sleep(0.1)
+        self.device = await BleakScanner.find_device_by_name(DEVICE_NAME, 36000.0)
+        if (self.device is None):
+            print('Device not found')
+            sys.exit(1)
+            return
+        await self.connect()
 
     def uart_data_handler(self, sender, data):
         unpacked = list(data)
@@ -47,19 +41,23 @@ class DistanceHeadingMonitor:
         self.is_connected = False
 
     async def connect(self):
-        print(f'Connecting to {self.device.name}')
-        client = await BleakClient(self.device, disconnected_callback=self.handle_disconnect)
-        try:
-            # client.connect()
-            print(f'Connected to {DEVICE_NAME}')
-            self.is_connected = True
-            self.client = client
-            sensor = client.services.get_service(UART_SERVICE_UUID)
-            self.rx = sensor.get_characteristic(UART_RX_CHAR_UUID)
-            self.tx = sensor.get_characteristic(UART_TX_CHAR_UUID)
-            await client.start_notify(self.tx.uuid, self.uart_data_handler)
-        except Exception as e:
-            print(e)
+        while True:
+            print(f'Connecting to {self.device.name}')
+            async with BleakClient(self.device, disconnected_callback=self.handle_disconnect) as client:
+                try:
+                    # client.connect()
+                    print(f'Connected to {DEVICE_NAME}')
+                    self.is_connected = True
+                    self.client = client
+                    sensor = client.services.get_service(UART_SERVICE_UUID)
+                    self.rx = sensor.get_characteristic(UART_RX_CHAR_UUID)
+                    self.tx = sensor.get_characteristic(UART_TX_CHAR_UUID)
+                    await client.start_notify(self.tx.uuid, self.uart_data_handler)
+                    while self.is_connected:
+                            # Give control back to the event loop to allow other tasks to run
+                            await asyncio.sleep(0.01)
+                except Exception as e:
+                    print(e)
 
 async def main():
     sensor = DistanceHeadingMonitor()

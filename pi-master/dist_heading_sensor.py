@@ -19,6 +19,37 @@ class DistanceHeadingMonitor:
         self.dist= [255, 255, 255]
         self.heading = 0
         self.pitch = 0
+        self.callbacks = []
+
+    def add_callback(self, callback):
+        """Add a callback function to be called when new data arrives.
+        
+        Args:
+            callback: A callable that accepts (dist, heading, pitch) parameters
+                     where dist is a list of 3 distance values, heading is an int,
+                     and pitch is an int.
+        """
+        if callback not in self.callbacks:
+            self.callbacks.append(callback)
+
+    def remove_callback(self, callback):
+        """Remove a previously registered callback.
+        
+        Args:
+            callback: The callback function to remove
+            
+        Returns:
+            bool: True if callback was found and removed, False otherwise
+        """
+        try:
+            self.callbacks.remove(callback)
+            return True
+        except ValueError:
+            return False
+
+    def clear_callbacks(self):
+        """Remove all registered callbacks."""
+        self.callbacks.clear()
 
     async def run(self, lock):
         # Possible future reconnect loop
@@ -29,7 +60,14 @@ class DistanceHeadingMonitor:
         self.dist = unpacked[0:3]
         self.heading = unpacked[3]
         self.pitch = unpacked[4]
-        print(f"Heading: {self.heading}, pitch: {self.pitch}, dist: {self.dist}")
+        #print(f"Heading: {self.heading}, pitch: {self.pitch}, dist: {self.dist}")
+        
+        # Call all registered callbacks with the new data
+        for callback in self.callbacks:
+            try:
+                callback(self.dist, self.heading, self.pitch)
+            except Exception as e:
+                print(f"Error calling callback {callback}: {e}")
 
     def handle_disconnect(self, _: BleakClient):
         print(f"Device {self.device} disconnected, retrying")
@@ -65,9 +103,17 @@ class DistanceHeadingMonitor:
 
 async def main():
     sensor = DistanceHeadingMonitor()
+    lock = asyncio.Lock()
+    
+    # Example callback function
+    def data_callback(dist, heading, pitch):
+        print(f"Callback received - Heading: {heading}, Pitch: {pitch}, Distances: {dist}")
+    
+    # Add the callback
+    sensor.add_callback(data_callback)
 
     tasks = [
-        asyncio.create_task(sensor.run())
+        asyncio.create_task(sensor.run(lock))
     ]
     # Wait for everything to finish
     await asyncio.gather(*tasks)

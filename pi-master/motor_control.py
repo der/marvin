@@ -86,8 +86,11 @@ ate right or left
             else:
                 return False
 
-    def send(self, speed: int, dir: str):
-        self.queue.append(f"{speed}{dir}")
+    def send(self, speed: int, dir: str, dist: int = None):
+        if dist is not None:
+            self.queue.append(f"{speed}{dir}{dist}")
+        else:
+            self.queue.append(f"{speed}{dir}")
 
     def shutdown(self):
         self.queue.append("s")

@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 import zlib
 from motor_control import MotorController
 from dist_heading_sensor import DistanceHeadingMonitor
-from actions import rotate_to_heading
+from actions import rotate_to_heading, move_along_heading
 
 # Configuration
 HOST = "0.0.0.0"  # Allow access from any device on the network
@@ -280,11 +280,19 @@ async def turn_to_heading(heading: int, sync: bool = False):
         return {"status": "success", "message": f"Turning to heading {heading}"}
     return {"status": "turning"}
 
+@app.post("/move-along-heading")
+async def move_heading(dist: int, heading: int, sync: bool = False):
+    if not sensor.is_connected:
+        return {"status": "error", "message": "Sensor connection not ready"}
+    if not motor.is_connected:
+        return {"status": "error", "message": "Motor base BLE connection not ready"}
+    task = asyncio.create_task(move_along_heading(dist, heading, sensor, motor))
+    if sync:
+        await task
+        return {"status": "success", "message": f"Moving along heading {heading} for {dist} units"}
+    return {"status": "moving"}
+
 async def startup():
-    """Initialize camera and start frame capture thread on startup."""
-    if not initialize_camera():
-        print("Failed to initialize camera. The stream will not work.")
-        return
     # Start the frame capture thread
     capture_thread = threading.Thread(target=capture_frames)
     capture_thread.daemon = True

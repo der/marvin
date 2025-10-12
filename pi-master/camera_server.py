@@ -293,6 +293,11 @@ async def move_heading(dist: int, heading: int, sync: bool = False):
     return {"status": "moving"}
 
 async def startup():
+    """Initialize camera and start frame capture thread on startup."""
+    if not initialize_camera():
+        print("Failed to initialize camera. The stream will not work.")
+        return
+    
     # Start the frame capture thread
     capture_thread = threading.Thread(target=capture_frames)
     capture_thread.daemon = True

@@ -5,6 +5,7 @@ from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementData
 import asyncio
+import contextlib
 
 UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -19,14 +20,9 @@ class DistanceHeadingMonitor:
         self.heading = 0
         self.pitch = 0
 
-    async def run(self):
-        print('Scanning for devices...')
-        self.device = await BleakScanner.find_device_by_name(DEVICE_NAME, 36000.0)
-        if (self.device is None):
-            print('Device not found')
-            sys.exit(1)
-            return
-        await self.connect()
+    async def run(self, lock):
+        # Possible future reconnect loop
+        await self.connect(lock)
 
     def uart_data_handler(self, sender, data):
         unpacked = list(data)
@@ -40,24 +36,32 @@ class DistanceHeadingMonitor:
         self.client = None
         self.is_connected = False
 
-    async def connect(self):
-        while True:
-            print(f'Connecting to {self.device.name}')
-            async with BleakClient(self.device, disconnected_callback=self.handle_disconnect) as client:
-                try:
-                    # client.connect()
-                    print(f'Connected to {DEVICE_NAME}')
-                    self.is_connected = True
-                    self.client = client
-                    sensor = client.services.get_service(UART_SERVICE_UUID)
-                    self.rx = sensor.get_characteristic(UART_RX_CHAR_UUID)
-                    self.tx = sensor.get_characteristic(UART_TX_CHAR_UUID)
-                    await client.start_notify(self.tx.uuid, self.uart_data_handler)
-                    while self.is_connected:
-                            # Give control back to the event loop to allow other tasks to run
-                            await asyncio.sleep(0.01)
-                except Exception as e:
-                    print(e)
+    async def connect(self, lock):
+        async with contextlib.AsyncExitStack() as stack:
+            async with lock:
+                print('Scanning for devices...')
+                self.device = await BleakScanner.find_device_by_name(DEVICE_NAME, 36000.0)
+                if (self.device is None):
+                    print('Device not found')
+                    return  
+
+                print(f'Connecting to {self.device.name}')
+                client = await stack.enter_async_context(BleakClient(self.device, disconnected_callback=self.handle_disconnect))
+                print(f'Connected to {DEVICE_NAME}')
+                self.is_connected = True
+                self.client = client
+                sensor = client.services.get_service(UART_SERVICE_UUID)
+                self.rx = sensor.get_characteristic(UART_RX_CHAR_UUID)
+                self.tx = sensor.get_characteristic(UART_TX_CHAR_UUID)
+                await client.start_notify(self.tx.uuid, self.uart_data_handler)
+
+            # Release lock
+            try:
+                while self.is_connected:
+                        # Give control back to the event loop to allow other tasks to run
+                        await asyncio.sleep(0.5)
+            except Exception as e:
+                print(e)
 
 async def main():
     sensor = DistanceHeadingMonitor()

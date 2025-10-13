@@ -31,6 +31,32 @@ def is_moving() -> bool:
     j = response.json()
     return j.get("status") == "success" and j.get("moving")
 
+def get_heading() -> int:
+    sensor = get_sensor()
+    if sensor is None:
+        return -1
+    return sensor.get("heading", -1)
+
+def get_sensor() -> dict|None:
+    response = requests.get(f"{MARVIN_BASE}/sensor-status")
+    if (response.status_code != 200):
+        print(f"Request failed [{response.status_code}] {response.text}")
+        return None
+    j = response.json()
+    if j.get("status") == "success":
+        return j.get("sensor_status")
+    return None
+
+def move_along_heading(dist: int, heading: int, sync: bool = False):
+    response = requests.post(f"{MARVIN_BASE}/move-along-heading", params={
+        "dist": str(dist),
+        "heading": str(heading),
+        "sync": str(sync)
+    })
+    if (response.status_code != 200):
+        print(f"Request failed [{response.status_code}] {response.text}")
+    return
+
 def move_and_stop(dir="f", speed:int=50, distance: int|None=None):
     move(dir, speed, distance, True)
 

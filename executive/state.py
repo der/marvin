@@ -35,10 +35,6 @@ class RoverState(BaseModel):
         default_factory=list,
         description="List of objects currently visible"
     )
-    current_image: Optional[str] = Field(
-        default=None,
-        description="Path or reference to current camera image"
-    )
     
     def get_summary(self) -> str:
         """Get a human-readable summary of rover state."""
@@ -54,17 +50,24 @@ class RoverState(BaseModel):
 class HighLevelState(BaseModel):
     """High-level state managed by the executive."""
     mode: RoverMode = Field(default=RoverMode.STANDBY)
-    current_goal: Optional[str] = Field(
-        default=None,
-        description="Current goal as set by user prompts"
-    )
-    plan: Optional[str] = Field(
-        default=None,
-        description="High-level plan to achieve the current goal"
-    )
-    
+
     def get_summary(self) -> str:
         """Get a human-readable summary of high-level state."""
-        goal_str = self.current_goal if self.current_goal else "none"
-        plan_str = self.plan if self.plan else "none"
-        return f"Mode: {self.mode.value}, Goal: {goal_str}, Plan: {plan_str}"
+        return f"Mode: {self.mode.value}"
+
+class MovementDirections(str, Enum):
+    """Possible movement directions for the rover."""
+    FORWARD = "forward"
+    BACKWARD = "backward"
+    ROTATE_LEFT = "rotate_left"
+    ROTATE_RIGHT = "rotate_right"
+    SLIDE_LEFT = "slide_left"
+    SLIDE_RIGHT = "slide_right"
+    ALONG_HEADING = "along_heading"
+
+class MovementInstruction(BaseModel):
+    """A single movement instruction for the rover."""
+    direction: MovementDirections = Field(description="Direction of movement")
+    value: float = Field(
+        description="Distance in cm for linear movements or degrees for rotations or headings"
+    )

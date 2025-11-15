@@ -7,7 +7,7 @@ between the executive agent and the cortex.
 
 import asyncio
 from typing import Optional
-from executive import ExecutiveAgent
+from executive import Executive
 from cortex import RoverCortex
 
 
@@ -16,7 +16,7 @@ class DialogHandler:
     Handles user input and coordinates system responses.
     """
     
-    def __init__(self, executive: ExecutiveAgent, cortex: RoverCortex):
+    def __init__(self, executive: Executive, cortex: RoverCortex):
         """
         Initialize the dialog handler.
         
@@ -27,20 +27,6 @@ class DialogHandler:
         self.executive = executive
         self.cortex = cortex
         self.running = False
-        
-        # Set up cortex callbacks
-        self.cortex.set_obstacle_callback(self._handle_obstacle)
-        self.cortex.set_plan_complete_callback(self._handle_plan_complete)
-    
-    def _handle_obstacle(self, distance: float):
-        """Callback when cortex detects an obstacle."""
-        response = self.executive.handle_obstacle_event(distance)
-        self._display_system_message(response)
-    
-    def _handle_plan_complete(self):
-        """Callback when cortex completes a plan."""
-        response = self.executive.handle_plan_complete()
-        self._display_system_message(response)
     
     def _display_user_input(self, text: str):
         """Display user input with formatting."""
@@ -57,7 +43,7 @@ class DialogHandler:
     def _display_status(self):
         """Display current status of the system."""
         print("\n" + "="*60)
-        print(f"High-Level: {self.executive.high_level_state.get_summary()}")
+        print(f"{self.executive.high_level_state.get_summary()}")
         print(f"Rover: {self.cortex.state.get_summary()}")
         print("="*60 + "\n")
     
@@ -87,11 +73,7 @@ class DialogHandler:
         
         # Process through executive agent
         try:
-            response = await self.executive.process_prompt(
-                user_input,
-                self.cortex.state,
-                self.cortex
-            )
+            response = await self.executive.process_prompt(user_input)
             self._display_agent_response(response)
         except Exception as e:
             self._display_system_message(f"Error: {str(e)}")

@@ -75,6 +75,11 @@ class DialogHandler:
             self._display_status()
             return
         
+        if user_input.lower().strip() == "history":
+            for msg in self.executive.message_history:
+                print(msg)
+            return
+        
         if user_input.lower().strip() in ["quit", "exit"]:
             self._display_system_message("Shutting down...")
             self.running = False
@@ -100,6 +105,7 @@ class DialogHandler:
         print("  - Type your instructions or questions")
         print("  - 'stop' - Emergency stop the rover")
         print("  - 'status' - Show current status")
+        print("  - 'history' - Show message history")
         print("  - 'quit' or 'exit' - Shutdown system")
         print("="*60 + "\n")
         

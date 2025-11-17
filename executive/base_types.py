@@ -74,7 +74,7 @@ class MovementInstruction(BaseModel):
     )
 
     def summarize(self):
-        return f"{self.direction}:{self.value}"
+        return f"{self.direction.value}:{self.value}"
 
 @dataclass
 class Prompt:

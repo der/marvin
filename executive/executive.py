@@ -41,6 +41,7 @@ class Executive(ExecutiveBase):
         self.prompt_queue: list[Prompt] = []
         self.deferred_tool_requests = {}
         self.running = True
+        self.message_history = []
     
         self.exec_model = OpenAIModel(EXEC_MODEL, provider = OpenAIProvider(
             base_url="http://localhost:8080/v1",
@@ -116,17 +117,21 @@ class Executive(ExecutiveBase):
                 messages = self.deferred_tool_requests.pop(id)
                 def_results = DeferredToolResults()
                 def_results.calls[id] = next_prompt.prompt
-                return await self.exec_agent.run(message_history=messages, deferred_tool_results=def_results)
+                result = await self.exec_agent.run(message_history=messages, deferred_tool_results=def_results)
+                # TODO trap poor results
+                self.message_history.extend(result.new_messages())
+                return "done"
             else:
                 return f"Internal error: No deferred request found for call ID: {id}"
         else:
             try:
                 print(f"[ExecutiveAgent] Processing prompt: {next_prompt.prompt}")
-                result = await self.exec_agent.run(next_prompt.prompt, deps=deps)
+                result = await self.exec_agent.run(user_prompt=next_prompt.prompt, message_history=self.message_history, deps=deps)
                 if isinstance(result.output, DeferredToolRequests):
                     return "moving"
                 else:
                     print(f"[ExecutiveAgent] LLM response: {result}")
+                    self.message_history.extend(result.new_messages())
                     return result.output
             except Exception as e:
                 return f"Error processing prompt: {str(e)}"

@@ -6,6 +6,8 @@ executes movement commands, and monitors for obstacles.
 """
 
 import asyncio
+import concurrent.futures
+import time
 from typing import Optional, Callable
 from base_types import RoverState, MovementInstruction
 from pydantic_ai import ModelMessage
@@ -15,53 +17,61 @@ class DummyRoverInterface:
     Dummy interface to simulate rover hardware.
     Replace this with actual camera_server API calls later.
     """
-    
+
     def __init__(self):
         self.heading = 0.0
         self.is_moving = False
         self.simulated_obstacle_distance = 100.0
-        self.callback = None
-        
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+
     def get_heading(self) -> float:
         """Get current heading from compass."""
         return self.heading
-    
+
     def get_distance_to_obstacle(self) -> float:
         """Get distance to nearest obstacle in cm."""
         return self.simulated_obstacle_distance
-    
-    async def move_forward(self, dist: float, speed: float = 0.5):
+
+    def move_forward(self, dist: float, speed: float = 0.5):
         """Start moving forward."""
-        self.is_moving = True
-        print(f"[Rover] Moving forward at speed {speed}")
-        await asyncio.sleep(dist / (speed * 100))
-        self.is_moving = False
-    
-    async def move_backward(self, dist: float, speed: float = 0.5):
+        def task():
+            self.is_moving = True
+            print(f"[Rover] Moving forward at speed {speed}")
+            time.sleep(dist / (speed * 100))
+            self.is_moving = False
+        return self.executor.submit(task)
+
+    def move_backward(self, dist: float, speed: float = 0.5):
         """Start moving backward."""
-        self.is_moving = True
-        print(f"[Rover] Moving backward at speed {speed}")
-        await asyncio.sleep(dist / (speed * 100))
-    
-    async def rotate(self, direction: str, dist:float, speed: float = 0.3):
+        def task():
+            self.is_moving = True
+            print(f"[Rover] Moving backward at speed {speed}")
+            time.sleep(dist / (speed * 100))
+            self.is_moving = False
+        return self.executor.submit(task)
+
+    def rotate(self, direction: str, dist: float, speed: float = 0.3):
         """Rotate on the spot."""
-        self.is_moving = True
-        print(f"[Rover] Rotating {direction} at speed {speed}")
-        # Simulate rotation
-        await asyncio.sleep(dist / (speed * 100))
-        if direction == "left":
-            self.heading = self.heading - dist
-        else:
-            self.heading = self.heading + dist
-        self.is_moving = False
-    
-    async def strafe(self, dist: float, direction: str, speed: float = 0.5):
+        def task():
+            self.is_moving = True
+            print(f"[Rover] Rotating {direction} at speed {speed}")
+            time.sleep(dist / (speed * 100))
+            if direction == "left":
+                self.heading -= dist
+            else:
+                self.heading += dist
+            self.is_moving = False
+        return self.executor.submit(task)
+
+    def strafe(self, dist: float, direction: str, speed: float = 0.5):
         """Strafe sideways using mecanum wheels."""
-        self.is_moving = True
-        print(f"[Rover] Strafing {direction} at speed {speed}")
-        await asyncio.sleep(dist / (speed * 100))
-        self.is_moving = False  
-    
+        def task():
+            self.is_moving = True
+            print(f"[Rover] Strafing {direction} at speed {speed}")
+            time.sleep(dist / (speed * 100))
+            self.is_moving = False
+        return self.executor.submit(task)
+
     def stop(self):
         """Stop all movement."""
         self.is_moving = False
@@ -86,6 +96,7 @@ class RoverCortex:
         self.running = False
         self.current_instruction: Optional[MovementInstruction] = None
         self.callback = None
+        self.movement_future: Optional[concurrent.futures.Future] = None
     
     def stop(self):
         """Immediately stop the rover (e.g., user says 'stop')."""
@@ -104,37 +115,36 @@ class RoverCortex:
         """Return the current state of the rover"""
         return self.state
     
-    async def move(self, instruction: MovementInstruction):
+    def move(self, instruction: MovementInstruction) -> Optional[concurrent.futures.Future]:
         """Execute a single movement instruction."""
         self.current_instruction = instruction
         direction = instruction.direction
         value = instruction.value
         
         if direction == "forward":
-            await self.rover.move_forward(value)
+            return self.rover.move_forward(value)
         elif direction == "backward":
-            await self.rover.move_backward(value)
+            return self.rover.move_backward(value)
         elif direction == "rotate_left":
-            await self.rover.rotate("left", value)
+            return self.rover.rotate("left", value)
         elif direction == "rotate_right":
-            await self.rover.rotate("right", value)
+            return self.rover.rotate("right", value)
         elif direction == "slide_left":
-            await self.rover.strafe(value, "left")
+            return self.rover.strafe(value, "left")
         elif direction == "slide_right":
-            await self.rover.strafe(value, "right")
+            return self.rover.strafe(value, "right")
         elif direction == "along_heading":
             # Move along current heading
-            await self.rover.move_forward(value)
+            return self.rover.move_forward(value)
         else:
             if self.callback:
                 self.callback(f"[Cortex] Unknown movement direction: {direction}")
-        if self.callback:
-            self.callback(f"Moved {instruction.summarize()}")
+            return None
     
     def start_movement(self, instruction: MovementInstruction, callback: Optional[Callable]):
         """Start movement without awaiting (for non-blocking calls)."""
         self.callback = callback
-        asyncio.create_task(self.move(instruction))
+        self.movement_future = self.move(instruction)
 
     async def run(self):
         """Main control loop - updates state periodically."""
@@ -143,8 +153,9 @@ class RoverCortex:
         
         while self.running:
             self.update_state()
-            
-            if not self.state.is_moving and self.callback is not None:
+
+            if self.movement_future is not None and self.movement_future.done():
+                self.movement_future = None
                 instruction = self.current_instruction
                 callback = self.callback
                 self.callback = None

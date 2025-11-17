@@ -129,6 +129,8 @@ class DialogHandler:
                     print("\n")
                     self._display_system_message("Interrupted by user")
                     break
+                except Exception as e:
+                    self._display_system_message(f"Error: {str(e)}")
                     
         finally:
             self.executive.quit()

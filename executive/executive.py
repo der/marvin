@@ -117,7 +117,7 @@ class Executive(ExecutiveBase):
                 messages = self.deferred_tool_requests.pop(id)
                 def_results = DeferredToolResults()
                 def_results.calls[id] = next_prompt.prompt
-                result = await self.exec_agent.run(message_history=messages, deferred_tool_results=def_results)
+                result = await self.exec_agent.run(message_history=messages, deferred_tool_results=def_results, deps=deps)
                 # TODO trap poor results
                 self.message_history.extend(result.new_messages())
                 return "done"

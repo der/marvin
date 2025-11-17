@@ -6,7 +6,7 @@ between the executive agent and the cortex.
 """
 
 import asyncio
-from typing import Optional
+from base_types import Prompt
 from executive import Executive
 from cortex import RoverCortex
 
@@ -47,7 +47,16 @@ class DialogHandler:
         print(f"Rover: {self.cortex.state.get_summary()}")
         print("="*60 + "\n")
     
-    async def process_user_input(self, user_input: str):
+    def respond_to_user(self, text: str):
+        """
+        Send a response back to the user.
+        
+        Args:
+            text: The response text
+        """
+        self._display_agent_response(text)
+
+    def process_user_input(self, user_input: str):
         """
         Process user input and generate appropriate response.
         
@@ -58,8 +67,8 @@ class DialogHandler:
         
         # Handle special commands
         if user_input.lower().strip() == "stop":
-            self.cortex.emergency_stop()
-            self._display_system_message("Emergency stop activated!")
+            self.executive.stop()
+            self._display_system_message("Stopped")
             return
         
         if user_input.lower().strip() == "status":
@@ -73,8 +82,7 @@ class DialogHandler:
         
         # Process through executive agent
         try:
-            response = await self.executive.process_prompt(user_input)
-            self._display_agent_response(response)
+            response = self.executive.enqueue_prompt(user_input)
         except Exception as e:
             self._display_system_message(f"Error: {str(e)}")
     
@@ -107,7 +115,7 @@ class DialogHandler:
                     )
                     
                     if user_input.strip():
-                        await self.process_user_input(user_input)
+                        self.process_user_input(user_input)
                     
                 except EOFError:
                     break
@@ -117,5 +125,5 @@ class DialogHandler:
                     break
                     
         finally:
-            self.cortex.stop_loop()
+            self.executive.quit()
             print("\nDialog handler stopped.")

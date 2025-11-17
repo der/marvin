@@ -9,7 +9,7 @@ from typing import Optional
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
-from state import HighLevelState, RoverState, RoverMode
+from base_types import HighLevelState, RoverState, RoverMode
 from dataclasses import dataclass
 
 

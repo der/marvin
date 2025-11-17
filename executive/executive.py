@@ -5,11 +5,12 @@ This module uses an LLM to interpret user commands, create plans,
 and respond to queries about the rover's state and environment.
 """
 
-from typing import Optional
-from pydantic_ai import Agent, RunContext, CallDeferred, DeferredToolRequests
+import asyncio
+from typing import Any, Optional
+from pydantic_ai import Agent, RunContext, CallDeferred, DeferredToolRequests, DeferredToolResults
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
-from state import HighLevelState, RoverState, MovementInstruction
+from base_types import HighLevelState, MovementInstruction, Prompt, UIOutput, ExecutiveBase, CortexBase
 from dataclasses import dataclass
 from cortex import RoverCortex
 
@@ -32,10 +33,14 @@ class ExecutiveDeps:
     high_level_state: HighLevelState
     cortex: RoverCortex
 
-class Executive:
 
-    def __init__(self, cortex: RoverCortex):
+class Executive(ExecutiveBase):
+
+    def __init__(self, cortex: CortexBase):
         self.cortex = cortex
+        self.prompt_queue: list[Prompt] = []
+        self.deferred_tool_requests = {}
+        self.running = True
     
         self.exec_model = OpenAIModel(EXEC_MODEL, provider = OpenAIProvider(
             base_url="http://localhost:8080/v1",
@@ -53,6 +58,10 @@ class Executive:
 
         self._register_tools()
 
+    def set_output(self, out: UIOutput):
+        """Set UI to use for reporting agent"""
+        self.out = out
+
     def _register_tools(self):
 
         @self.exec_agent.tool
@@ -67,39 +76,74 @@ class Executive:
                Args:
                     instruction: The direction and distance to move.
             """
-            messages = ctx.messages
-            def callback(i: MovementInstruction):
-                print(f"[Executive] Completed movement: {i.direction} {i.value}, returning to exec agent")
-                self.exec_agent.run(message_history=messages, deps=ctx.deps, deferred_tool_results=f"Completed movement: {i.direction} {i.value}")
-            ctx.deps.cortex.start_movement(instruction, callback=callback)
+            self.record_deferred_tool_request(ctx)
+            callback = lambda response: self.movement_completed(ctx.tool_call_id, response)
+            print(f"[ExecutiveAgent] Scheduling movement: {instruction}")
+            ctx.deps.cortex.start_movement(instruction, callback)
             raise CallDeferred
 
-    async def process_prompt(
-        self, 
-        prompt: str, 
-    ) -> str:
-        """
-        Process a user prompt and return a response.
-        
-        Args:
-            prompt: User's input text
-        
-        Returns:
-            Agent's response text
-        """
-        # Create context with current state
+    def record_deferred_tool_request(self, ctx: RunContext[ExecutiveDeps]):
+        self.deferred_tool_requests[ctx.tool_call_id] = ctx.messages
+
+    def stop(self):
+        self.deferred_tool_requests.clear()
+        self.prompt_queue.clear()
+
+    def enqueue_prompt(self, prompt: str):
+        """Add a user prompt to the processing queue."""
+        self.prompt_queue.append(Prompt(prompt=prompt))
+    
+    def movement_completed(self, call_id: str, results: Any):
+        """Notify the executive that a movement instruction has completed."""
+        self.prompt_queue.append(Prompt(prompt=results, deferred_call_id=call_id))
+
+    async def run_next_prompt(self) -> Optional[str]:
+        """Process the next prompt in the queue, if any."""
+        if not self.prompt_queue:
+            return None
+
         deps = ExecutiveDeps(
             high_level_state=self.high_level_state,
             cortex=self.cortex
         )
-        
-        try:
-            result = await self.exec_agent.run(prompt, deps=deps)
 
-            if isinstance(result.output, DeferredToolRequests):
-                return "moving"
+        next_prompt = self.prompt_queue.pop(0)
+
+        if next_prompt.deferred_call_id:
+            id = next_prompt.deferred_call_id
+            if id in self.deferred_tool_requests:
+                print(f"[ExecutiveAgent] Resuming deferred call ID: {id}")
+                messages = self.deferred_tool_requests.pop(id)
+                def_results = DeferredToolResults()
+                def_results.calls[id] = next_prompt.prompt
+                return await self.exec_agent.run(message_history=messages, deferred_tool_results=def_results)
             else:
-                print(f"[ExecutiveAgent] LLM response: {result}")
-                return result.output
-        except Exception as e:
-            return f"Error processing prompt: {str(e)}"
+                return f"Internal error: No deferred request found for call ID: {id}"
+        else:
+            try:
+                print(f"[ExecutiveAgent] Processing prompt: {next_prompt.prompt}")
+                result = await self.exec_agent.run(next_prompt.prompt, deps=deps)
+                if isinstance(result.output, DeferredToolRequests):
+                    return "moving"
+                else:
+                    print(f"[ExecutiveAgent] LLM response: {result}")
+                    return result.output
+            except Exception as e:
+                return f"Error processing prompt: {str(e)}"
+
+    async def run(self):
+        """Main control loop."""
+        self.running = True
+        print("[Executive] start executive loop")
+        while self.running:
+            if len(self.prompt_queue) > 0:
+                response = await self.run_next_prompt()
+                if response is not None:
+                    self.out.respond_to_user(response)
+            else:
+                await asyncio.sleep(0.1)
+
+    def quit(self):
+        """Stop the control loop."""
+        self.running = False
+        self.cortex.quit()

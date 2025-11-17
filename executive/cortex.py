@@ -7,7 +7,7 @@ executes movement commands, and monitors for obstacles.
 
 import asyncio
 from typing import Optional, Callable
-from state import RoverState, MovementInstruction
+from base_types import RoverState, MovementInstruction
 from pydantic_ai import ModelMessage
 
 class DummyRoverInterface:
@@ -20,6 +20,7 @@ class DummyRoverInterface:
         self.heading = 0.0
         self.is_moving = False
         self.simulated_obstacle_distance = 100.0
+        self.callback = None
         
     def get_heading(self) -> float:
         """Get current heading from compass."""
@@ -83,14 +84,15 @@ class RoverCortex:
         self.state = RoverState()
         self.update_interval = update_interval
         self.running = False
-        self.callback = None
         self.current_instruction: Optional[MovementInstruction] = None
+        self.callback = None
     
-    def emergency_stop(self):
+    def stop(self):
         """Immediately stop the rover (e.g., user says 'stop')."""
         print("[Cortex] Emergency stop triggered")
         self.rover.stop()
         self.state.is_moving = False
+        self.callback = None
     
     def update_state(self):
         """Update rover state from sensors and vision."""
@@ -98,8 +100,13 @@ class RoverCortex:
         self.state.is_moving = self.rover.is_moving
         self.state.distance_to_obstacle = self.rover.get_distance_to_obstacle()
 
+    def get_state(self):
+        """Return the current state of the rover"""
+        return self.state
+    
     async def move(self, instruction: MovementInstruction):
         """Execute a single movement instruction."""
+        self.current_instruction = instruction
         direction = instruction.direction
         value = instruction.value
         
@@ -119,12 +126,14 @@ class RoverCortex:
             # Move along current heading
             await self.rover.move_forward(value)
         else:
-            print(f"[Cortex] Unknown movement direction: {direction}")
+            if self.callback:
+                self.callback(f"[Cortex] Unknown movement direction: {direction}")
+        if self.callback:
+            self.callback(f"Moved {instruction.summarize()}")
     
-    def start_movement(self, instruction: MovementInstruction, callback):
+    def start_movement(self, instruction: MovementInstruction, callback: Optional[Callable]):
         """Start movement without awaiting (for non-blocking calls)."""
         self.callback = callback
-        self.current_instruction = instruction
         asyncio.create_task(self.move(instruction))
 
     async def run(self):
@@ -144,7 +153,7 @@ class RoverCortex:
             
             await asyncio.sleep(self.update_interval)
     
-    def stop_loop(self):
+    def quit(self):
         """Stop the control loop."""
         self.running = False
         self.rover.stop()

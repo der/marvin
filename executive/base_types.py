@@ -1,13 +1,14 @@
 """
-State models for the rover system.
+Base types for the rover system.
 
 This module defines the data structures for coordinating between
 the executive agent and the cortex controller.
 """
 
-from typing import Optional, List
+from typing import Optional, List, Any
 from pydantic import BaseModel, Field
 from enum import Enum
+from dataclasses import dataclass
 
 
 class RoverMode(str, Enum):
@@ -71,3 +72,65 @@ class MovementInstruction(BaseModel):
     value: float = Field(
         description="Distance in cm for linear movements or degrees for rotations or headings"
     )
+
+    def summarize(self):
+        return f"{self.direction}:{self.value}"
+
+@dataclass
+class Prompt:
+    """A user prompt, an alert from the cortext or a deferred movement completion."""
+    prompt: Any
+    deferred_call_id: Optional[str] = None
+
+class UIOutput:
+    """Interface for sending responses back to the user"""
+    def respond_to_user(self, response: str):
+        pass
+
+class ExecutiveBase:
+    """Interface for the executive implementation for use by other elements"""    
+
+    def set_output(self, out: UIOutput):
+        """Set UI to use for reporting agent responses"""
+        pass
+
+    def enqueue_prompt(self, prompt: str):
+        """Add a user prompt to the processing queue."""
+        pass
+
+    def movement_completed(self, call_id: str, results: Any):
+        """Notify the executive that a movement instruction has completed."""        
+        pass
+
+    async def run(self):
+        """Main control loop."""
+        pass
+
+    def stop(self):
+        """Cease current movements and discard any prompt in progress"""
+        pass
+
+    def quit(self):
+        """Stop the processing loop"""
+
+class CortexBase:
+    """Interface for the cortex implementation for use by other elements"""
+
+    def get_state(self):
+        """Return the current state of the rover"""
+        pass
+
+    def start_movement(self, instruction: MovementInstruction, callback):
+        """Schedule and start a single movement instruction."""
+        pass
+
+    def stop(self):
+        """Immediately stop the rover (e.g., user says 'stop')."""
+        pass
+
+    async def run(self):
+        """Main control loop - updates state periodically."""
+        pass
+
+    def quit(self):
+        """Stop the processing loop"""

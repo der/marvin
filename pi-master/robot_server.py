@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from picamera2 import Picamera2
-from libcamera import Transform
+from libcamera import Transform, controls
 from copy import copy
 import cv2
 import asyncio
@@ -40,6 +40,7 @@ def initialize_camera():
         )
         config["main"] = {"format": "RGB888", "size": (1024, 768), "preserve_ar": True}
         config["lores"] = {"format": "RGB888", "size": (320, 240), "preserve_ar": True}
+        camera.set_controls({"AfMode": controls.AfModeEnum.Continuous})
         camera.configure(config)
 
         # To do, set up sizes and lores

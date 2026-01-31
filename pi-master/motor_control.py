@@ -22,8 +22,7 @@ class MotorController:
             - f b sr sl   - forward/back/slide right/slide left
             - dr dl Dr Dl - diagonal right/left forward/back
             - tr tl Tr Tl - turn right/left turn back right/left
-            - rr rl       - rot                            await client.write_gatt_char(rx, command, response=False)                            
-ate right or left
+            - rr rl       - rotate right or left
             - s           - stop
             - ?           - status request, returns 1 if moving, 0 if stopped
     """

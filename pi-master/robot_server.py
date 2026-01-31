@@ -17,6 +17,7 @@ from motor_control import MotorController
 from dist_heading_sensor import DistanceHeadingMonitor
 from actions import rotate_to_heading, move_along_heading
 from eyes import Eyes
+from st3215 import ST3215
 
 # Configuration
 HOST = "0.0.0.0"  # Allow access from any device on the network
@@ -77,6 +78,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Pi Rover Camera Server", lifespan=lifespan)
 
+# Camera block
 
 def generate_frames() -> Iterator[bytes]:
     """Generate frames for the multipart response."""
@@ -205,9 +207,9 @@ async def index():
     """
     return HTMLResponse(content=html_content)
 
+# Motor controller block
 
 motor = MotorController()
-
 
 @app.post("/set-motor")
 async def set_motor(s: int, dir: str, dist: int = None, sync: bool = False):
@@ -249,6 +251,7 @@ async def is_moving():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+# Sensor block
 
 sensor = DistanceHeadingMonitor()
 
@@ -294,6 +297,8 @@ async def move_heading(dist: int, heading: int, sync: bool = False):
         return {"status": "success", "message": f"Moving along heading {heading} for {dist} units"}
     return {"status": "moving"}
 
+# Eyes controller block
+
 eyes = Eyes()
 
 @app.post("/set-eyes")
@@ -312,7 +317,47 @@ async def set_eyes(awake: bool = True, wide: bool = False, x: int = 0):
         return {"status": "success", "message": f"Eyes set to awake={awake}, wide={wide}, x={x}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-        
+
+# Neck block
+
+servo = ST3215('/dev/ttyACM0')
+
+TILT_RANGE = 250
+PAN_RANGE = 750
+
+@app.post("/set-neck")
+async def set_neck(tilt: int, pan: int, speed: int =2000):
+    """
+    Set the neck tilt and pan angles.
+    tilt: range -100 to 100
+    pan: range -100 to 100
+    speed: movement speed (default 2000)
+    """
+    try:
+        if tilt < -100 or tilt > 100 or pan < -100 or pan > 100:
+            return {"status": "error", "message": "Tilt and pan must be between -100 and 100"}
+        tilt = int(tilt * TILT_RANGE / 100) + 2048
+        pan = int(pan * PAN_RANGE / 100) + 2048
+        servo.MoveTo(0, tilt, speed=speed, acc=50, wait=False)
+        servo.MoveTo(1, pan, speed=speed, acc=50, wait=False)
+        return {"status": "success", "message": f"Neck set to tilt={tilt}, pan={pan}"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/get-neck")
+async def get_neck():
+    """
+    Get the current neck tilt and pan angles.
+    """
+    try:
+        tilt_pos = servo.ReadPosition(0)
+        pan_pos = servo.ReadPosition(1)
+        tilt = int((tilt_pos - 2048) * 100 / TILT_RANGE)
+        pan = int((pan_pos - 2048) * 100 / PAN_RANGE)
+        return {"status": "success", "tilt": tilt, "pan": pan}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 async def startup():
     """Initialize camera and start frame capture thread on startup."""
     if not initialize_camera():

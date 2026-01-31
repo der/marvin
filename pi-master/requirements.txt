@@ -7,4 +7,5 @@ picamera2==0.3.31
 Pillow==9.4.0
 Pillow==12.1.0
 spidev==3.5
+st3215==0.4.0
 uvicorn==0.40.0

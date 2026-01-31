@@ -16,10 +16,11 @@ import zlib
 from motor_control import MotorController
 from dist_heading_sensor import DistanceHeadingMonitor
 from actions import rotate_to_heading, move_along_heading
+from eyes import Eyes
 
 # Configuration
 HOST = "0.0.0.0"  # Allow access from any device on the network
-PORT = 8080
+PORT = 80
 JPEG_QUALITY = 70  # 0-100, higher is better quality but larger size
 
 # Global variable for camera and frame handling
@@ -293,6 +294,25 @@ async def move_heading(dist: int, heading: int, sync: bool = False):
         return {"status": "success", "message": f"Moving along heading {heading} for {dist} units"}
     return {"status": "moving"}
 
+eyes = Eyes()
+
+@app.post("/set-eyes")
+async def set_eyes(awake: bool = True, wide: bool = False, x: int = 0):
+    """
+    Set the eyes state and position.
+    awake: true/false default true
+    wide: true/false default false
+    x: offset of eyes between -100 and 100
+    """
+    try:
+        eyes.set_awake(awake)
+        if (awake):
+            eyes.set_wide_eyes(wide)
+            eyes.set_eyes_at(x)
+        return {"status": "success", "message": f"Eyes set to awake={awake}, wide={wide}, x={x}"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+        
 async def startup():
     """Initialize camera and start frame capture thread on startup."""
     if not initialize_camera():
@@ -311,6 +331,9 @@ async def startup():
     # Start sensor listener
     print("Starting sensor listener")
     asyncio.create_task(sensor.run(lock))
+    # Eyes controller
+    asyncio.create_task(eyes.run())
+    eyes.set_awake(True)
 
 
 async def shutdown():

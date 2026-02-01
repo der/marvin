@@ -27,7 +27,7 @@ class Eyes:
     width = 240
     height = 240
 
-    def __init__(self, backlight=80):
+    def __init__(self, backlight=70):
         self.disp0 = LCD_1inch28.LCD_1inch28(spi=SPI.SpiDev(self.bus0, self.device0),spi_freq=10000000,rst=self.RST0,dc=self.DC0,bl=self.BL0)
         self.disp1 = LCD_1inch28.LCD_1inch28(spi=SPI.SpiDev(self.bus1, self.device1),spi_freq=10000000,rst=self.RST1,dc=self.DC1,bl=self.BL1)
         self.eyes_closed = self.make_eyes_closed_image()

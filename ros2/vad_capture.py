@@ -20,12 +20,13 @@ def int2float(sound):
 
 class VADCapture():
 
-    def __init__(self, device_index=-1, use_onnx=True, topic='audio_stream'):
+    def __init__(self, device_index=-1, use_onnx=True, topic='audio_stream', threshold=0.7):
         self.sample_rate = 16000
         self.channels = 1
         self.chunk_size = 512
         self.device_index = device_index
         self.topic = topic
+        self.threshold = threshold
         self.use_onnx = use_onnx
 
         self.init_model()
@@ -35,6 +36,7 @@ class VADCapture():
         self.stream = None
         self.is_streaming = False
         self.init_audio_stream()
+        self.is_voice = False
 
     def init_model(self):
         self.model = load_silero_vad(onnx=self.use_onnx, opset_version=15)
@@ -71,8 +73,18 @@ class VADCapture():
         audio_int16 = np.frombuffer(in_data, np.int16)
         audio_float32 = int2float(audio_int16)
         new_confidence = self.model(torch.from_numpy(audio_float32), 16000).item()
-        print(f"Speech probability: {new_confidence:.3f}")
-        
+        #print(f"Speech probability: {new_confidence:.3f}")
+        if new_confidence > self.threshold:
+            if not self.is_voice:
+                print("Voice detected")
+            self.is_voice = True
+            # TODO set chunks, including lookback, to topic
+        else:
+            if self.is_voice:
+                print("Voice ended")
+            self.lookback = audio_int16
+            self.is_voice = False
+
         return (None, pyaudio.paContinue)
 
     def cleanup(self):

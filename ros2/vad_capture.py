@@ -109,14 +109,17 @@ class VADCapture():
         
         if self.audio is not None:
             self.audio.terminate()
+        self.talker.unadvertise()
 
     def __del__(self):
         """Destructor to ensure cleanup."""
         self.cleanup()
 
 def main(args=None):
+    client = roslibpy.Ros(host='192.168.178.61', port=9090)
+    client.run()
     try:
-        capture = VADCapture()
+        capture = VADCapture(client, topic='audio_stream')
         time.sleep(15)  # Keep the capture running for a while to test
     except KeyboardInterrupt:
         print('Shutting down audio capture...')

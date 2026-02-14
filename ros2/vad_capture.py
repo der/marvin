@@ -2,7 +2,7 @@ import time
 import pyaudio
 import numpy as np
 import torch
-import torch
+from collections import deque
 from silero_vad import (load_silero_vad,
                           read_audio,
                           get_speech_timestamps,
@@ -20,7 +20,7 @@ def int2float(sound):
 
 class VADCapture():
 
-    def __init__(self, device_index=-1, use_onnx=True, topic='audio_stream', threshold=0.7):
+    def __init__(self, device_index=-1, use_onnx=True, topic='audio_stream', threshold=0.9, pause_limit=12):
         self.sample_rate = 16000
         self.channels = 1
         self.chunk_size = 512
@@ -28,6 +28,7 @@ class VADCapture():
         self.topic = topic
         self.threshold = threshold
         self.use_onnx = use_onnx
+        self.pause_limit = pause_limit
 
         self.init_model()
 
@@ -37,6 +38,7 @@ class VADCapture():
         self.is_streaming = False
         self.init_audio_stream()
         self.is_voice = False
+        self.pause_length = 0
 
     def init_model(self):
         self.model = load_silero_vad(onnx=self.use_onnx, opset_version=15)
@@ -78,12 +80,16 @@ class VADCapture():
             if not self.is_voice:
                 print("Voice detected")
             self.is_voice = True
-            # TODO set chunks, including lookback, to topic
+            self.pause_length = 0
+            # TODO send chunks, including lookback, to topic
         else:
             if self.is_voice:
-                print("Voice ended")
+                self.pause_length += 1
+                if self.pause_length > self.pause_limit:
+                    print("Voice ended")
+                    self.is_voice = False
             self.lookback = audio_int16
-            self.is_voice = False
+
 
         return (None, pyaudio.paContinue)
 

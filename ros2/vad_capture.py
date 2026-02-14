@@ -2,7 +2,7 @@ import time
 import pyaudio
 import numpy as np
 import torch
-from collections import deque
+import roslibpy
 from silero_vad import (load_silero_vad,
                           read_audio,
                           get_speech_timestamps,
@@ -20,7 +20,8 @@ def int2float(sound):
 
 class VADCapture():
 
-    def __init__(self, device_index=-1, use_onnx=True, topic='audio_stream', threshold=0.9, pause_limit=12):
+    def __init__(self, client, device_index=-1, use_onnx=True, topic='audio_stream', threshold=0.9, pause_limit=12):
+        self.client = client
         self.sample_rate = 16000
         self.channels = 1
         self.chunk_size = 512
@@ -29,6 +30,9 @@ class VADCapture():
         self.threshold = threshold
         self.use_onnx = use_onnx
         self.pause_limit = pause_limit
+
+        self.info = {'sample_rate': self.sample_rate, 'chunk_size': self.chunk_size, 'num_channels': self.channels}
+        self.talker = roslibpy.Topic(client, topic, 'audio_msg/Audio')
 
         self.init_model()
 
@@ -79,17 +83,18 @@ class VADCapture():
         if new_confidence > self.threshold:
             if not self.is_voice:
                 print("Voice detected")
-            self.is_voice = True
+                self.talker.publish(roslibpy.Message({'info': self.info, 'data': {'int16_data': self.lookback.tolist()}, 'event': 'start_utterance'}))
+                self.is_voice = True
+            self.talker.publish(roslibpy.Message({'info': self.info, 'data': {'int16_data': audio_int16.tolist()}}))
             self.pause_length = 0
-            # TODO send chunks, including lookback, to topic
         else:
             if self.is_voice:
                 self.pause_length += 1
                 if self.pause_length > self.pause_limit:
                     print("Voice ended")
+                    self.talker.publish(roslibpy.Message({'info': self.info, 'data': {'int16_data': audio_int16.tolist()}, 'event': 'end_utterance'}))
                     self.is_voice = False
             self.lookback = audio_int16
-
 
         return (None, pyaudio.paContinue)
 

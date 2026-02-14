@@ -2,3 +2,4 @@ torchaudio
 onnxruntime
 silero-vad
 pyaudio
+roslibpy

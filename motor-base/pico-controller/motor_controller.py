@@ -84,7 +84,7 @@ def limit_speed(speed: float) -> int:
     return int(speed)
 
 class MotorPID:
-    def __init__(self, motor: Motor, kp:float = 1.0, ki:float = 0.1, kd:float = 0.05):
+    def __init__(self, motor: Motor, kp:float = 0.3, ki:float = 0.1, kd:float = 0.05):
         self.motor = motor
         self.kp = kp
         self.ki = ki

@@ -1,0 +1,4 @@
+torchaudio
+onnxruntime
+silero-vad
+pyaudio

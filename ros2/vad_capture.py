@@ -20,7 +20,7 @@ def int2float(sound):
 
 class VADCapture():
 
-    def __init__(self, client, device_index=-1, use_onnx=True, topic='audio_stream', threshold=0.9, pause_limit=12):
+    def __init__(self, client, device_index=-1, use_onnx=True, topic='audio_stream', threshold=0.9, pause_limit=10):
         self.client = client
         self.sample_rate = 16000
         self.channels = 1

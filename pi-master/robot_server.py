@@ -18,6 +18,7 @@ from dist_heading_sensor import DistanceHeadingMonitor
 from actions import rotate_to_heading, move_along_heading
 from eyes import Eyes
 from st3215 import ST3215
+import os
 
 # Configuration
 HOST = "0.0.0.0"  # Allow access from any device on the network
@@ -357,6 +358,13 @@ async def get_neck():
         return {"status": "success", "tilt": tilt, "pan": pan}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.post("/shutdown")
+async def shutdown_endpoint():
+    """Shutdown the robot server."""
+    await shutdown()
+    # Stop the server
+    os.system("sudo shutdown now")
 
 async def startup():
     """Initialize camera and start frame capture thread on startup."""

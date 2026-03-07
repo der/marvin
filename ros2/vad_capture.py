@@ -40,7 +40,7 @@ class VADCapture():
         self.init_model()
 
         # Audio stream
-        self.audio = pyaudio.PyAudio()       
+        self.audio = pyaudio.PyAudio()
         self.stream = None
         self.is_streaming = False
         self.init_audio_stream()
@@ -55,7 +55,7 @@ class VADCapture():
         """Initialize the audio input stream."""
         try:
             device_index = self.device_index if self.device_index >= 0 else None
-            
+
             self.stream = self.audio.open(
                 format=pyaudio.paInt16,
                 channels=self.channels,
@@ -65,11 +65,11 @@ class VADCapture():
                 input_device_index=device_index,
                 stream_callback=self.audio_callback
             )
-            
+
             self.stream.start_stream()
             self.is_streaming = True
             print('Audio stream started successfully')
-            
+
         except Exception as e:
             print(f'Failed to initialize audio stream: {e}')
             self.is_streaming = False
@@ -78,7 +78,7 @@ class VADCapture():
         """PyAudio callback function for processing audio chunks."""
         if status:
             print(f'Audio stream status: {status}')
-        
+
         audio_int16 = np.frombuffer(in_data, np.int16)
         audio_float32 = int2float(audio_int16)
         new_confidence = self.model(torch.from_numpy(audio_float32), 16000).item()
@@ -125,7 +125,8 @@ class VADCapture():
         self.cleanup()
 
 def main(args=None):
-    client = roslibpy.Ros(host='192.168.178.61', port=9090)
+#    client = roslibpy.Ros(host='192.168.178.61', port=9090)
+    client = roslibpy.Ros(host='192.168.178.90', port=9090)
     client.run()
     try:
         capture = VADCapture(client, topic='audio_stream')

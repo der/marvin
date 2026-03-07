@@ -7,15 +7,25 @@ from threading import Lock
 from queue import Full, Queue, Empty
 import time
 
+CHUNK_SIZE = 1024
+SAMPLE_RATE = 44100
+CHANNELS = 1
+
 class TextToSpeech:
     def __init__(self, auto_download=True):
         self.tts = TTS(auto_download=auto_download)
-        self.voice_style = self.get_voice_style(voice_name="M5")
+        self.voice_style = self.tts.get_voice_style(voice_name="M5")
         self.total_steps = 6
         self.speed = 1.6
 
-    def _synthesize(self, text):
-        return self.tts.synthesize(text=text, voice_style = self.voice_style, total_steps=self.total_steps, speed=self.speed)
+    def synthesize(self, text):
+        wav, duration =  self.tts.synthesize(text=text, voice_style = self.voice_style, total_steps=self.total_steps, speed=self.speed)
+        wav_chunks = []
+        for i in range(0, len(wav[0]), CHUNK_SIZE):
+            chunk = wav[0][i:i+CHUNK_SIZE]
+            audio_int16 = (np.clip(chunk, -1.0, 1.0) * 32767).astype(np.int16)
+            wav_chunks.append(audio_int16.tobytes())
+        return wav_chunks
 
     def prepare_text(self, text: str) -> list[str]:
         """Preprocess and chunk text for TTS synthesis."""
@@ -153,7 +163,7 @@ class Player:
         self.device_index = device_index
         self.stream = None
         self.is_playing = False
-        self.audio_queue = Queue(maxsize=10)
+        self.audio_queue = Queue(maxsize=1024)
         self.stream_lock = Lock()
         self.buffer_underruns = 0
 
@@ -174,12 +184,30 @@ class Player:
         
         try:
             audio_data = self.audio_queue.get_nowait()
+            print(f"Playing audio chunk of size {len(audio_data)} bytes")
             return (audio_data, pyaudio.paContinue)
         except Empty:
             # No audio data available, output silence
-            silence = (b'\x00\x00' * frame_count)  # 16-bit stereo silence
+            print("Audio queue is empty, outputting silence")
+            silence = (b'\x00\x00' * frame_count * CHANNELS)  # 16-bit stereo silence
             return (silence, pyaudio.paContinue)
 
+    def cancel_playback(self):
+        """Stop playback and clear the audio queue."""
+        with self.stream_lock:
+            if self.stream and self.is_playing:
+                self.stream.stop_stream()
+                self.stream.close()
+                self.stream = None
+            self.is_playing = False
+            # Clear the audio queue
+            while not self.audio_queue.empty():
+                try:
+                    self.audio_queue.get_nowait()
+                except Empty:
+                    break
+            print("Playback cancelled and audio queue cleared")
+            
     def init_audio_stream(self):
         """Initialize the audio output stream."""
         try:
@@ -187,10 +215,10 @@ class Player:
             
             self.stream = self.audio.open(
                 format=pyaudio.paInt16,
-                channels=1,
-                rate=16000,
+                channels=CHANNELS,
+                rate=SAMPLE_RATE,
                 output=True,
-                frames_per_buffer=1024,
+                frames_per_buffer=CHUNK_SIZE,
                 output_device_index=device_index,
                 stream_callback=self.audio_callback
             )
@@ -205,12 +233,13 @@ def main():
     tts = TextToSpeech()
     player = Player()
 
-    text = "Hello, this is a test of the text-to-speech system. It should handle various punctuation and formatting correctly."
-    chunks = tts.prepare_text(text)
+    full_text = "Hello, this is a test of the text-to-speech system. It should handle various punctuation and formatting correctly."
+    text_chunks = tts.prepare_text(full_text)
 
-    for chunk in chunks:
-        audio_data = tts._synthesize(chunk)
-        player.play_audio(audio_data)
+    for chunk in text_chunks:
+        audio_data = tts.synthesize(chunk)
+        for audio_chunk in audio_data:
+            player.play_audio(audio_chunk)
 
     # Keep the main thread alive while audio is playing
     try:

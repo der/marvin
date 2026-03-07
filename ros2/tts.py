@@ -3,7 +3,7 @@ from unicodedata import normalize
 import re
 import pyaudio
 import numpy as np
-from threading import Lock
+from threading import Lock, Thread
 from queue import Full, Queue, Empty
 import time
 
@@ -44,7 +44,6 @@ class TextToSpeech:
         Returns:
             List of text chunks
         """
-        import re
 
         # Split by paragraph (two or more newlines)
         paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", text.strip()) if p.strip()]
@@ -229,24 +228,59 @@ class Player:
             print(f'Failed to initialize audio stream: {e}')
             self.is_playing = False
 
+class TTSController:
+    def __init__(self, auto_download=True, device_index=-1):
+        self.tts = TextToSpeech(auto_download=auto_download)
+        self.player = Player(device_index=device_index)
+        self.input_queue = Queue()
+        self.is_running = False
+        self.worker_thread = None
+    
+    def start(self):
+        """Start the TTS processing thread."""
+        if not self.is_running:
+            self.is_running = True
+            self.worker_thread = Thread(target=self._worker_loop, daemon=True)
+            self.worker_thread.start()
+    
+    def stop(self):
+        """Stop the TTS processing thread."""
+        self.is_running = False
+        if self.worker_thread:
+            self.worker_thread.join(timeout=5)
+        self.player.cancel_playback()
+    
+    def queue_text(self, text: str):
+        """Add text to the processing queue."""
+        self.input_queue.put(text)
+    
+    def _worker_loop(self):
+        """Main worker loop that processes text and plays audio."""
+        while self.is_running:
+            try:
+                text = self.input_queue.get(timeout=0.5)
+                text_chunks = self.tts.prepare_text(text)
+                for chunk in text_chunks:
+                    audio_data = self.tts.synthesize(chunk)
+                    for audio_chunk in audio_data:
+                        self.player.play_audio(audio_chunk)
+            except Empty:
+                continue
+
 def main():
-    tts = TextToSpeech()
-    player = Player()
-
-    full_text = "Hello, this is a test of the text-to-speech system. It should handle various punctuation and formatting correctly."
-    text_chunks = tts.prepare_text(full_text)
-
-    for chunk in text_chunks:
-        audio_data = tts.synthesize(chunk)
-        for audio_chunk in audio_data:
-            player.play_audio(audio_chunk)
-
-    # Keep the main thread alive while audio is playing
+    tts_controller = TTSController(auto_download=True, device_index=-1)
+    tts_controller.start()
+    
     try:
-        while player.is_playing:
-            time.sleep(0.1)
+        while True:
+            user_input = input("Enter text to synthesize (or 'exit' to quit): ")
+            if user_input.lower() == 'exit':
+                break
+            tts_controller.queue_text(user_input)
     except KeyboardInterrupt:
         pass
+    finally:
+        tts_controller.stop()
 
 if __name__ == "__main__":
     main()

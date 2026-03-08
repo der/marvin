@@ -184,11 +184,9 @@ class Player:
         
         try:
             audio_data = self.audio_queue.get_nowait()
-            print(f"Playing audio chunk of size {len(audio_data)} bytes")
             return (audio_data, pyaudio.paContinue)
         except Empty:
             # No audio data available, output silence
-            print("Audio queue is empty, outputting silence")
             silence = (b'\x00\x00' * frame_count * CHANNELS)  # 16-bit stereo silence
             return (silence, pyaudio.paContinue)
 

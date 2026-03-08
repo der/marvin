@@ -10,11 +10,12 @@ import time
 CHUNK_SIZE = 1024
 SAMPLE_RATE = 44100
 CHANNELS = 1
+VOICE_NAME = "F5"
 
 class TextToSpeech:
     def __init__(self, auto_download=True):
         self.tts = TTS(auto_download=auto_download)
-        self.voice_style = self.tts.get_voice_style(voice_name="M5")
+        self.voice_style = self.tts.get_voice_style(voice_name=VOICE_NAME)
         self.total_steps = 6
         self.speed = 1.6
 

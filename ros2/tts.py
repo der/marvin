@@ -10,22 +10,24 @@ import time
 CHUNK_SIZE = 1024
 SAMPLE_RATE = 44100
 CHANNELS = 1
-VOICE_NAME = "F5"
+VOICE_NAME = "M5"
 
 class TextToSpeech:
     def __init__(self, auto_download=True):
         self.tts = TTS(auto_download=auto_download)
         self.voice_style = self.tts.get_voice_style(voice_name=VOICE_NAME)
-        self.total_steps = 6
-        self.speed = 1.6
+        self.total_steps = 8
+        self.speed = 1.8
 
     def synthesize(self, text):
+        # print(f"Synthesizing text: {text}")
         wav, duration =  self.tts.synthesize(text=text, voice_style = self.voice_style, total_steps=self.total_steps, speed=self.speed)
         wav_chunks = []
         for i in range(0, len(wav[0]), CHUNK_SIZE):
             chunk = wav[0][i:i+CHUNK_SIZE]
             audio_int16 = (np.clip(chunk, -1.0, 1.0) * 32767).astype(np.int16)
             wav_chunks.append(audio_int16.tobytes())
+        # print(f"Synthesis complete, generated {len(wav_chunks)} audio chunks")
         return wav_chunks
 
     def prepare_text(self, text: str) -> list[str]:
@@ -187,7 +189,7 @@ class Player:
             return (audio_data, pyaudio.paContinue)
         except Empty:
             # No audio data available, output silence
-            silence = (b'\x00\x00' * frame_count * CHANNELS)  # 16-bit stereo silence
+            silence = (b'\x00\x00' * frame_count * CHANNELS)  # 16-bit silence
             return (silence, pyaudio.paContinue)
 
     def cancel_playback(self):
@@ -208,6 +210,7 @@ class Player:
             
     def init_audio_stream(self):
         """Initialize the audio output stream."""
+        print("Initializing audio stream...")
         try:
             device_index = self.device_index if self.device_index >= 0 else None
             

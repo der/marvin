@@ -16,12 +16,14 @@ class TextToSpeech:
     def __init__(self, auto_download=True):
         self.tts = TTS(auto_download=auto_download)
         self.voice_style = self.tts.get_voice_style(voice_name=VOICE_NAME)
-        self.total_steps = 8
+        self.total_steps = 10
         self.speed = 1.8
 
     def synthesize(self, text):
         # print(f"Synthesizing text: {text}")
         wav, duration =  self.tts.synthesize(text=text, voice_style = self.voice_style, total_steps=self.total_steps, speed=self.speed)
+        # Debug
+        self.tts.save_audio(wav, "synth.wav")
         wav_chunks = []
         for i in range(0, len(wav[0]), CHUNK_SIZE):
             chunk = wav[0][i:i+CHUNK_SIZE]

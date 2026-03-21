@@ -14,6 +14,7 @@ class AudioPlayer:
         self.sample_rate = 16000
         self.chunk_size = 512
         self.audio_queue = Queue(maxsize=10)
+        self.audio = pyaudio.PyAudio()
         self.init_audio_stream()
 
     def play_message(self, msg):
@@ -24,8 +25,8 @@ class AudioPlayer:
         audio_data = np.array(msg['data']['int16_data'], dtype=np.int16)
 
         # Test for events - not yet wired up
-        if msg.event != '':
-            print(f'Received audio event: {msg.event}')
+        if msg['event'] != '':
+            print(f'Received audio event: {msg["event"]}')
         
         # Try to add to queue
         try:
@@ -40,24 +41,24 @@ class AudioPlayer:
                 pass
 
     def verify_format(self, msg):
-        if msg.info.format != '16kmono':
-            print(f'Unsupported audio format: {msg.info.format}')
+        if msg['info']['format'] != '16kmono':
+            print(f'Unsupported audio format: {msg["info"]["format"]}')
             return False
-        if msg.info.sample_rate != self.sample_rate:
-            print(f'Unsupported sample rate: {msg.info.sample_rate}Hz')
+        if msg['info']['sample_rate'] != self.sample_rate:
+            print(f'Unsupported sample rate: {msg["info"]["sample_rate"]}Hz')
             return False
-        if msg.info.num_channels != self.channels:
-            print(f'Unsupported number of channels: {msg.info.num_channels}')
+        if msg['info']['num_channels'] != self.channels:
+            print(f'Unsupported number of channels: {msg["info"]["num_channels"]}')
             return False
-        if msg.info.chunk_size != self.chunk_size:
-            print(f'Unsupported chunk size: {msg.info.chunk_size} samples/chunk')
+        if msg['info']['chunk_size'] != self.chunk_size:
+            print(f'Unsupported chunk size: {msg["info"]["chunk_size"]} samples/chunk')
             return False
         return True
 
     def init_audio_stream(self):
         """Initialize the audio output stream."""
         try:
-            device_index = self.device_index if self.device_index >= 0 else None
+            device_index = 0
             
             self.stream = self.audio.open(
                 format=pyaudio.paInt16,
@@ -72,21 +73,20 @@ class AudioPlayer:
             self.stream.start_stream()
             self.is_playing = True
             
-            self.get_logger().info('Audio output stream started successfully')
+            print('Audio output stream started successfully')
             
         except Exception as e:
-            self.get_logger().error(f'Failed to initialize audio stream: {e}')
+            print(f'Failed to initialize audio stream: {e}')
             self.is_playing = False
 
     def audio_callback(self, in_data, frame_count, time_info, status):
         """PyAudio callback function for playing audio chunks."""
         if status:
-            self.get_logger().warn(f'Audio stream status: {status}')
+            print(f'Audio stream status: {status}')
         
         try:
             # Get audio data from queue
             audio_data = self.audio_queue.get_nowait()
-            self.chunks_played += 1
             return (audio_data, pyaudio.paContinue)
         except Empty:
             # No audio data available, return silence

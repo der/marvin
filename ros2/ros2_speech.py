@@ -1,7 +1,7 @@
 import time
 import roslibpy
 from vad_capture import VADCapture
-from tts import TTSController
+from audio_player import AudioPlayer
 import argparse
     
 def main(args=None):
@@ -17,15 +17,10 @@ def main(args=None):
 
     try:
         capture = VADCapture(client, topic='audio_stream')
-        tts = TTSController()
-        tts.start()
+        player = AudioPlayer()
 
-        def tts_callback(message):
-            print('Received TTS request: ' + message['data'])
-            tts.queue_text(message['data'])
-
-        listener = roslibpy.Topic(client, '/llm_response', 'std_msgs/String')
-        listener.subscribe(tts_callback)
+        listener = roslibpy.Topic(client, '/audio_stream', 'audio_msg/Audio')
+        listener.subscribe(lambda message: player.play_message(message))
 
         while True:
             time.sleep(1)
@@ -33,6 +28,8 @@ def main(args=None):
         print('Shutting down audio capture...')
     finally:
         capture.cleanup()
+        player.cleanup()
+        client.terminate()
 
 if __name__ == '__main__':
     main()

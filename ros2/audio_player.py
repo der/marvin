@@ -16,7 +16,7 @@ class AudioPlayer:
         self.chunk_size = 512
         self.format: str = '16kmono'
         self.buffer_underruns = 0
-        self.audio_queue = Queue(maxsize=64)
+        self.audio_queue = Queue(maxsize=256)
         self.stream_lock = Lock()
         self.stream = None
         self.is_playing = False

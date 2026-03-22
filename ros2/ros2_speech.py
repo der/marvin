@@ -19,7 +19,7 @@ def main(args=None):
         capture = VADCapture(client, topic='audio_stream')
         player = AudioPlayer()
 
-        listener = roslibpy.Topic(client, '/audio_stream', 'audio_msg/Audio')
+        listener = roslibpy.Topic(client, '/speech_stream', 'audio_msg/Audio')
         listener.subscribe(lambda message: player.play_message(message))
 
         while True:

@@ -44,9 +44,14 @@ class AudioPlayer:
         # Convert message data to numpy array
         audio_data = np.array(msg['data']['int16_data'], dtype=np.int16)
 
-        # Test for events - not yet wired up
+        # Test for events
         if msg['event'] != '':
             print(f'Received audio event: {msg["event"]}')
+            if msg['event'] == 'break':
+                # Clear the audio queue to stop current playback immediately
+                with self.audio_queue.mutex:
+                    self.audio_queue.queue.clear()
+                return
 
         # Try to add to queue
         try:

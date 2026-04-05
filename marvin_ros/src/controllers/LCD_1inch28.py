@@ -1,6 +1,6 @@
 
 import time
-import lcdconfig
+import controllers.lcdconfig as lcdconfig
 
 class LCD_1inch28(lcdconfig.RaspberryPi):
 

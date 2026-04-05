@@ -6,7 +6,7 @@ import time
 import logging
 
 import spidev as SPI
-import LCD_1inch28
+import controllers.LCD_1inch28 as LCD_1inch28
 from PIL import Image,ImageDraw,ImageFont
 
 class Eyes:

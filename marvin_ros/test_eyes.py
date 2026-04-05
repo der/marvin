@@ -10,9 +10,11 @@ async def test_eyes():
     eyes.set_wide_eyes(True)
     await asyncio.sleep(1)
     eyes.set_wide_eyes(False)
-    for x in range(-100, 100, 10):
+    for x in range(-100, 100, 20):
         eyes.set_eyes_at(x)
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
+    eyes.set_eyes_at(0)
+    await asyncio.sleep(1)
 
 def main():
     asyncio.run(test_eyes())

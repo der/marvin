@@ -1,14 +1,15 @@
-from datetime import time
 from controllers.eyes import Eyes
 import asyncio
+import time
 import roslibpy
+import roslibpy.ros1.actionlib
 import argparse
     
 class EyesAction:
     def __init__(self, client):
         self.client = client
         self.eyes = Eyes()
-        self.server = roslibpy.SimpleActionServer(client, 'eyes_action', 'robot_msg/Eyes')
+        self.server = roslibpy.ros1.actionlib.SimpleActionServer(client, 'eyes_action', 'robot_msg/Eyes')
 
     async def start(self):
         asyncio.create_task(self.eyes.run())
@@ -50,7 +51,7 @@ async def main(args=None):
         asyncio.create_task(eye_action_server.start())
 
         while True:
-            time.sleep(1)
+            await asyncio.sleep(1)
     except KeyboardInterrupt:
         print('Shutting down audio capture...')
     finally:

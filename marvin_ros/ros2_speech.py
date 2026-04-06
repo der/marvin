@@ -1,7 +1,7 @@
 import time
 import roslibpy
-from vad_capture import VADCapture
-from audio_player import AudioPlayer
+from speech.vad_capture import VADCapture
+from speech.audio_player import AudioPlayer
 import argparse
     
 def main(args=None):

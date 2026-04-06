@@ -1,23 +1,62 @@
+from datetime import time
 from controllers.eyes import Eyes
 import asyncio
+import roslibpy
+import argparse
+    
+class EyesAction:
+    def __init__(self, client):
+        self.client = client
+        self.eyes = Eyes()
+        self.server = roslibpy.SimpleActionServer(client, 'eyes_action', 'robot_msg/Eyes')
 
-eyes = Eyes()
+    async def start(self):
+        asyncio.create_task(self.eyes.run())
+        self.server.start(self.execute)
 
-async def test_eyes():
-    asyncio.create_task(eyes.run())
-    eyes.set_awake(True)
-    await asyncio.sleep(1)
-    eyes.set_wide_eyes(True)
-    await asyncio.sleep(1)
-    eyes.set_wide_eyes(False)
-    for x in range(-100, 100, 20):
-        eyes.set_eyes_at(x)
-        await asyncio.sleep(0.1)
-    eyes.set_eyes_at(0)
-    await asyncio.sleep(1)
+    def execute(self, goal):
+        print("Received goal:", goal)
+        if goal['awake']:
+            self.eyes.set_awake(True)
+        else:
+            self.eyes.set_awake(False)
 
-def main():
-    asyncio.run(test_eyes())
+        if goal['wide']:
+            self.eyes.set_wide_eyes(True)
+        else:
+            self.eyes.set_wide_eyes(False)
+
+        self.eyes.set_eyes_at(goal['x'])
+        self.server.set_succeeded({'acknowledged': True})
+    
+async def main(args=None):
+    parser = argparse.ArgumentParser(description='ROS2 Marvin Nodes')
+    parser.add_argument('--ros_host', type=str, default='minimax', help='Choose ROS host: minimax or main')
+    args = parser.parse_args()
+
+    if args.ros_host == 'minimax':
+        client = roslibpy.Ros(host='192.168.178.90', port=9090)
+    else:
+        client = roslibpy.Ros(host='192.168.178.61', port=9090)
+    client.run()
+
+    try:
+        # capture = VADCapture(client, topic='audio_stream')
+        # player = AudioPlayer()
+
+        # listener = roslibpy.Topic(client, '/speech_stream', 'audio_msg/Audio')
+        # listener.subscribe(lambda message: player.play_message(message))
+        eye_action_server = EyesAction(client)
+        asyncio.create_task(eye_action_server.start())
+
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print('Shutting down audio capture...')
+    finally:
+#        capture.cleanup()
+#        player.cleanup()
+        client.terminate()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

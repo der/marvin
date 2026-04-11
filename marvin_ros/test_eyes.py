@@ -1,21 +1,22 @@
-from datetime import time
 from controllers.eyes import Eyes
 import asyncio
+import time
 import roslibpy
+import roslibpy.ros1.actionlib
 import argparse
     
-class EyesAction:
+class EyesServer:
     def __init__(self, client):
         self.client = client
         self.eyes = Eyes()
-        self.server = roslibpy.SimpleActionServer(client, 'eyes_action', 'robot_msg/Eyes')
+        self.server = roslibpy.Topic(client, '/marvin/eyes', 'robot_msg/Eyes')
 
     async def start(self):
         asyncio.create_task(self.eyes.run())
-        self.server.start(self.execute)
+        self.server.subscribe(self.execute)
 
     def execute(self, goal):
-        print("Received goal:", goal)
+        print("Eye server received goal:", goal)
         if goal['awake']:
             self.eyes.set_awake(True)
         else:
@@ -27,7 +28,6 @@ class EyesAction:
             self.eyes.set_wide_eyes(False)
 
         self.eyes.set_eyes_at(goal['x'])
-        self.server.set_succeeded({'acknowledged': True})
     
 async def main(args=None):
     parser = argparse.ArgumentParser(description='ROS2 Marvin Nodes')
@@ -46,12 +46,12 @@ async def main(args=None):
 
         # listener = roslibpy.Topic(client, '/speech_stream', 'audio_msg/Audio')
         # listener.subscribe(lambda message: player.play_message(message))
-        eye_action_server = EyesAction(client)
-        asyncio.create_task(eye_action_server.start())
+        eye_server = EyesServer(client)
+        asyncio.create_task(eye_server.start())
 
         while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
+            await asyncio.sleep(1)
+    except (KeyboardInterrupt, asyncio.CancelledError):
         print('Shutting down audio capture...')
     finally:
 #        capture.cleanup()

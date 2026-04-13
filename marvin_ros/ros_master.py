@@ -1,8 +1,8 @@
 from controllers.eyes import Eyes
 import asyncio
 import time
-from marvin_ros.src.speech.audio_player import AudioPlayer
-from marvin_ros.src.speech.vad_capture import VADCapture
+from src.speech.audio_player import AudioPlayer
+from src.speech.vad_capture import VADCapture
 import roslibpy
 import roslibpy.ros1.actionlib
 import argparse
@@ -37,6 +37,8 @@ class EyesServer:
             self.eyes.set_wide_eyes(True)
         elif event == 'vad/end':
             self.eyes.set_wide_eyes(False)
+        elif event == 'sleep':
+            self.eyes.set_awake(False)
     
 async def main(args=None):
     parser = argparse.ArgumentParser(description='ROS2 Marvin Nodes')
@@ -46,9 +48,11 @@ async def main(args=None):
     while True:
         try:
             if args.ros_host == 'minimax':
+                print("Connecting to minimax ROS host...")
                 client = roslibpy.Ros(host='192.168.178.90', port=9090)
             else:
-                client = roslibpy.Ros(host='192.168.178.61', port=9090)
+                print("Connecting to main ROS host...")
+                client = roslibpy.Ros(host='192.168.178.62', port=9090)
             client.run()
             break
         except Exception as e:

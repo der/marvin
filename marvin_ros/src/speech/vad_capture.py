@@ -36,6 +36,7 @@ class VADCapture():
 
         self.info = {'sample_rate': self.sample_rate, 'chunk_size': self.chunk_size, 'num_channels': self.channels}
         self.talker = roslibpy.Topic(client, topic, 'audio_msg/Audio')
+        self.events = roslibpy.Topic(client, 'events', 'std_msgs/String')
 
         self.init_model()
 
@@ -86,6 +87,7 @@ class VADCapture():
         if new_confidence > self.threshold:
             if not self.is_voice:
                 print("Voice detected")
+                self.events.publish(roslibpy.Message({'data': 'vad/start'}))
                 self.lookback_queue.append(audio_int16)
                 event = 'start_utterance'
                 for data in self.lookback_queue:
@@ -101,6 +103,7 @@ class VADCapture():
                 self.pause_length += 1
                 if self.pause_length > self.pause_limit:
                     print("Voice ended")
+                    self.events.publish(roslibpy.Message({'data': 'vad/end'}))
                     self.talker.publish(roslibpy.Message({'info': self.info, 'data': {'int16_data': audio_int16.tolist()}, 'event': 'end_utterance'}))
                     self.is_voice = False
             self.lookback_queue.append(audio_int16)
@@ -119,6 +122,7 @@ class VADCapture():
         if self.audio is not None:
             self.audio.terminate()
         self.talker.unadvertise()
+        self.events.unadvertise()
 
     def __del__(self):
         """Destructor to ensure cleanup."""

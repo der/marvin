@@ -44,15 +44,6 @@ class AudioPlayer:
         # Convert message data to numpy array
         audio_data = np.array(msg['data']['int16_data'], dtype=np.int16)
 
-        # Test for events
-        if msg['event'] != '':
-            print(f'Received audio event: {msg["event"]}')
-            if msg['event'] == 'break':
-                # Clear the audio queue to stop current playback immediately
-                with self.audio_queue.mutex:
-                    self.audio_queue.queue.clear()
-                return
-
         # Try to add to queue
         try:
             self.audio_queue.put_nowait(audio_data.tobytes())
@@ -64,6 +55,10 @@ class AudioPlayer:
                 self.buffer_underruns += 1
             except Empty:
                 pass
+
+    def stop(self):
+        with self.audio_queue.mutex:
+            self.audio_queue.queue.clear()
 
     def init_audio_stream(self):
         """Initialize the audio output stream."""

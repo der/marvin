@@ -71,8 +71,15 @@ async def main(args=None):
         asyncio.create_task(eye_server.start())
 
         # Event handling
-        events_listener = roslibpy.Topic(client, 'events', 'std_msgs/String')
-        events_listener.subscribe(lambda message: eye_server.event_reaction(message['data']))
+        events_listener = roslibpy.Topic(client, '/events', 'std_msgs/String')
+        def event_callback(message):
+            msg = message['data'] if 'data' in message else str(message)
+            print(f"Received event: {msg}")
+            eye_server.event_reaction(msg)
+            if msg == 'vad/start':
+                player.stop()
+            
+        events_listener.subscribe(event_callback)
 
         while True:
             await asyncio.sleep(1)

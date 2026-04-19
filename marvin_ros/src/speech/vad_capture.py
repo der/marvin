@@ -88,6 +88,7 @@ class VADCapture():
             if not self.is_voice:
                 print("Voice detected")
                 self.events.publish(roslibpy.Message({'data': 'vad/start'}))
+                self.events.publish(roslibpy.Message({'data': 'interrupt'}))
                 self.lookback_queue.append(audio_int16)
                 event = 'start_utterance'
                 for data in self.lookback_queue:

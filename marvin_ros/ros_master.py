@@ -6,7 +6,7 @@ from src.speech.vad_capture import VADCapture
 import roslibpy
 import roslibpy.ros1.actionlib
 import argparse
-    
+
 class EyesServer:
     def __init__(self, client):
         self.client = client
@@ -39,7 +39,7 @@ class EyesServer:
             self.eyes.set_wide_eyes(False)
         elif event == 'sleep':
             self.eyes.set_awake(False)
-    
+ 
 async def main(args=None):
     parser = argparse.ArgumentParser(description='ROS2 Marvin Nodes')
     parser.add_argument('--ros_host', type=str, default='minimax', help='Choose ROS host: minimax or main')
@@ -76,10 +76,10 @@ async def main(args=None):
             msg = message['data'] if 'data' in message else str(message)
             print(f"Received event: {msg}")
             eye_server.event_reaction(msg)
-            if msg == 'vad/start':
+            if msg == 'interrupt':
                 print("Stopping player")
                 player.stop()
-            
+
         events_listener.subscribe(event_callback)
 
         while True:

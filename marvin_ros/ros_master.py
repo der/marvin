@@ -77,6 +77,7 @@ async def main(args=None):
             print(f"Received event: {msg}")
             eye_server.event_reaction(msg)
             if msg == 'vad/start':
+                print("Stopping player")
                 player.stop()
             
         events_listener.subscribe(event_callback)

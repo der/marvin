@@ -76,7 +76,7 @@ async def main(args=None):
             msg = message['data'] if 'data' in message else str(message)
             print(f"Received event: {msg}")
             eye_server.event_reaction(msg)
-            if msg == 'vad/start':
+            if msg == 'interrupt':
                 player.stop()
             
         events_listener.subscribe(event_callback)

@@ -2,12 +2,8 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["marvin_ros", "marvin_ros.controllers", "marvin_ros.messages", "marvin_ros.speech"]
-
 [tool.setuptools.packages.find]
 where = ["src"]
-
 
 [project]
 name = "marvin_ros"
@@ -20,7 +16,7 @@ dependencies = [
     "bleak==2.1.1",
     "fastapi==0.128.0",
     "gpiozero==2.0.1",
-    "numpy==1.24.2",
+    "numpy==2.4.0",
     "opencv_python==4.8.1.78",
     "picamera2==0.3.31",
     "Pillow==12.1.0",

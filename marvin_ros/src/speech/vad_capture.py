@@ -1,15 +1,12 @@
 import time
-import pyaudio
-import numpy as np
-import torch
-import roslibpy
 from collections import deque
-from silero_vad import (load_silero_vad,
-                          read_audio,
-                          get_speech_timestamps,
-                          save_audio,
-                          VADIterator,
-                          collect_chunks)
+
+import numpy as np
+import pyaudio
+import roslibpy
+import torch
+from silero_vad import VADIterator, collect_chunks, get_speech_timestamps, load_silero_vad, read_audio, save_audio
+
 
 def int2float(sound):
     abs_max = np.abs(sound).max()

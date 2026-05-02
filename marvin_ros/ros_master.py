@@ -39,9 +39,6 @@ class EyesServer:
             self.eyes.set_wide_eyes(False)
         elif event == 'sleep':
             self.eyes.set_awake(False)
-<<<<<<< Updated upstream
- 
-=======
     
 class NeckServer:
     def __init__(self, client):
@@ -55,7 +52,6 @@ class NeckServer:
         print("Neck server received goal:", goal)
         # Implement neck control logic here based on the received goal
 
->>>>>>> Stashed changes
 async def main(args=None):
     parser = argparse.ArgumentParser(description='ROS2 Marvin Nodes')
     parser.add_argument('--ros_host', type=str, default='minimax', help='Choose ROS host: minimax or main')

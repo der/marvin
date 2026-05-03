@@ -1,7 +1,6 @@
 from controllers.eyes import Eyes
 import asyncio
 from src.messages.base import BaseNode
-from src.speech.audio_player import AudioPlayer
 from src.speech.vad_capture import VADCapture
 import argparse
 
@@ -20,13 +19,15 @@ async def main(args=None):
     try:
         capture = VADCapture(client, topic=args.topic)
         while True:
+            await capture.run()
+            print("Audio capture loop exited, restarting..")
             await asyncio.sleep(1)
-
+    
     except (KeyboardInterrupt, asyncio.CancelledError):
         print('Shutting down audio capture...')
     finally:
         capture.cleanup()
-        client.sio.disconnect()
+        await client.sio.disconnect()
 
 if __name__ == "__main__":
     asyncio.run(main())

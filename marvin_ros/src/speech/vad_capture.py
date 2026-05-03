@@ -135,19 +135,3 @@ class VADCapture:
     def __del__(self):
         """Destructor to ensure cleanup."""
         self.cleanup()
-
-def main(args=None):
-#    client = roslibpy.Ros(host='192.168.178.61', port=9090)
-    client = roslibpy.Ros(host='192.168.178.90', port=9090)
-    client.run()
-    try:
-        capture = VADCapture(client, topic='audio_stream')
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print('Shutting down audio capture...')
-    finally:
-        capture.cleanup()
-
-if __name__ == '__main__':
-    main()

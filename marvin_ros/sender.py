@@ -18,7 +18,7 @@ class Sender(BaseNode):
         self.room = room
 
     async def send(self, text: str):
-        await self.publish(self.room, {"data": text})
+        await self.publish(self.room, text)
         logger.info(f"Sent: {text}")
 
 

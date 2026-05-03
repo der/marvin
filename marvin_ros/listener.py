@@ -15,8 +15,8 @@ class Listener(BaseNode):
         self.room = room
         self.handler(room)(self.on_message)
 
-    async def on_message(self, message: dict):
-        text = message.get("data", message)
+    async def on_message(self, message: dict | str):
+        text = message
         print(f"[{self.room}] {text}")
 
     async def run(self):

@@ -1,6 +1,6 @@
 from controllers.eyes import Eyes
 import asyncio
-from marvin_ros.src.messages.base import BaseNode
+from src.messages.base import BaseNode
 from src.speech.audio_player import AudioPlayer
 from src.speech.vad_capture import VADCapture
 import argparse
@@ -8,6 +8,7 @@ import argparse
 async def main(args=None):
     parser = argparse.ArgumentParser(description='Marvin Nodes')
     parser.add_argument('--host', type=str, default='main', help='Choose host: minimax or main')
+    parser.add_argument('--topic', type=str, default='/audio_stream', help='Topic to publish audio to')
     args = parser.parse_args()
 
     hub_url = "http://minimax.local:5000" if args.host == 'minimax' else "http://next.local:5000"
@@ -17,7 +18,7 @@ async def main(args=None):
     await client._connected.wait()
 
     try:
-        capture = VADCapture(client, topic='/audio_stream')
+        capture = VADCapture(client, topic=args.topic)
         while True:
             await asyncio.sleep(1)
 

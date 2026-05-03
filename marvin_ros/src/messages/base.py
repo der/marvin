@@ -61,7 +61,7 @@ class BaseNode:
             self._connected.clear()
 
         @self.sio.on("message")
-        async def on_message(data: dict, binary: Optional[bytes] = None):
+        async def on_message(data: dict):
             room = data.get("room", "unknown")
             message = data.get("message", {})
             handler = self._handlers.get(room)

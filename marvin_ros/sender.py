@@ -29,10 +29,7 @@ def main():
     parser.add_argument('--host', type=str, default='main', help='Choose host: minimax or main')
     args = parser.parse_args()
 
-    if args.host == 'minimax':
-        hub_url = "http://minimax.local:5000"
-    else:
-        hub_url = "http://next.local:5000"
+    hub_url = "http://minimax.local:5000" if args.host == 'minimax' else "http://next.local:5000"
     sender = Sender(hub_url=hub_url, room=args.topic)
 
     async def run():

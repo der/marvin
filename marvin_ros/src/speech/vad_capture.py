@@ -88,6 +88,7 @@ class VADCapture:
         if new_confidence > self.threshold:
             if not self.is_voice:
                 print("Voice detected")
+                self._publish_queue.put_nowait(("/events", {"type": "sys", "message": "interrupt"}))
                 self._publish_queue.put_nowait(("/events", {"type": "vad", "message": "voice start"}))
                 self.lookback_queue.append(audio_int16)
                 event = 'start_utterance'

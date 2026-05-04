@@ -99,7 +99,7 @@ class BaseNode:
     async def publish_event(self, type: str, message: str) -> None:
         """Publish a message to a room."""
         data: dict[str, Any] = {"type": type, "message": message}
-        await self.sio.emit("event", data)
+        await self.sio.emit("publish", {"room": "/events", "message": data})
 
     async def run(self) -> None:
         """Connect to hub and wait until interrupted."""

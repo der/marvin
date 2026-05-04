@@ -127,13 +127,12 @@ class VADCapture:
         """Drain the publish queue and await each client.publish call."""
         while True:
             try:
-                topic, payload = self._publish_queue.get(timeout=1)  # Wait for an item, timeout to allow graceful shutdown
+                topic, payload = self._publish_queue.get_nowait()
                 # print(f"Publishing to {topic}: {payload if isinstance(payload, str) else 'AudioMessage'}")
                 await self.client.publish(topic, payload)
                 self._publish_queue.task_done()
             except Empty:
-                pass
-            await asyncio.sleep(0)  # Yield control to the event loop
+                await asyncio.sleep(0.1)
 
     async def run(self):
         """Start the publish queue consumer. Call this from the async event loop."""

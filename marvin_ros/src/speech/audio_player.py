@@ -1,13 +1,12 @@
 """
 Audio player node for Marvin speech project.
-Used from a roslibpy client to play audio chunks received from a topic.
 """
 
 import pyaudio
 import numpy as np
 from threading import Lock
 from queue import Queue, Empty
-import roslibpy
+from messages import AudioMessage
 
 class AudioPlayer:
     def __init__(self):
@@ -24,25 +23,24 @@ class AudioPlayer:
         with self.stream_lock:
             self.init_audio_stream()
 
-    def play_message(self, msg):
-        info = msg['info']
-        if info['format'] != self.format:
+    def play_message(self, msg: AudioMessage):
+        if msg.info.format != self.format:
             print(
-                f'Audio format set to: {info["format"]}, '
-                f'{info["sample_rate"]}Hz, {info["num_channels"]}ch, '
-                f'{info["chunk_size"]} samples/chunk'
+                f'Audio format set to: {msg.info.format}, '
+                f'{msg.info.sample_rate}Hz, {msg.info.num_channels}ch, '
+                f'{msg.info.chunk_size} samples/chunk'
             )
             with self.stream_lock:
-                self.format = info['format']
-                self.sample_rate = info['sample_rate']
-                self.channels = info['num_channels']
-                self.chunk_size = info['chunk_size']
+                self.format = msg.info.format
+                self.sample_rate = msg.info.sample_rate
+                self.channels = msg.info.num_channels
+                self.chunk_size = msg.info.chunk_size
                 if self.stream is not None:
                     self.cleanup_stream()
                 self.init_audio_stream()
 
         # Convert message data to numpy array
-        audio_data = np.array(msg['data']['int16_data'], dtype=np.int16)
+        audio_data = np.array(msg.data.int16_data, dtype=np.int16)
 
         # Try to add to queue
         try:
@@ -113,24 +111,3 @@ class AudioPlayer:
         if self.audio is not None:
             self.audio.terminate()
 
-def main():
-    player = AudioPlayer()
-
-    client = roslibpy.Ros(host='192.168.178.61', port=9090)
-    client.run()
-
-    listener = roslibpy.Topic(client, '/audio_stream', 'audio_msg/Audio')
-    listener.subscribe(lambda message: player.play_message(message))
-
-    try:
-        while True:
-            pass
-    except KeyboardInterrupt:
-        print('Shutting down audio player...')
-        player.cleanup()
-    finally:
-        client.terminate()
-
-if __name__ == "__main__":
-    main()
-    

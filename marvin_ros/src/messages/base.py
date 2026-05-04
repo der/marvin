@@ -11,11 +11,10 @@ from pydantic import BaseModel
 
 logger = logging.getLogger("node")
 
-
-class TextMessage(BaseModel):
-    """Plain text message, equivalent to std_msgs/msg/String."""
-
-    data: str
+class EventMessage(BaseModel):
+    """Message format used on event channel."""
+    type: str
+    message: str
 
 
 class BaseNode:

@@ -10,6 +10,7 @@ from messages import AudioMessage
 
 class AudioPlayer:
     def __init__(self):
+        self.device_name = "Jabra"
         self.channels = 1
         self.sample_rate = 16000
         self.chunk_size = 512
@@ -58,10 +59,21 @@ class AudioPlayer:
         with self.audio_queue.mutex:
             self.audio_queue.queue.clear()
 
+    def find_device(self) -> int:
+        """Find the audio output device index by name."""
+        if self.device_name == 'default':
+            return 0
+        for i in range(self.audio.get_device_count()):
+            device_info = self.audio.get_device_info_by_index(i)
+            if self.device_name in device_info.get('name', '') and device_info.get('maxOutputChannels', 0) > 0:
+                print(f'Found audio output device: {device_info["name"]} (index {i})')
+                return i
+        return 0
+
     def init_audio_stream(self):
         """Initialize the audio output stream."""
         try:
-            device_index = 0
+            device_index = self.find_device()
             
             self.stream = self.audio.open(
                 format=pyaudio.paInt16,

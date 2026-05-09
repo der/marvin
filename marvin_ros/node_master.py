@@ -1,6 +1,7 @@
 from controllers.eyes import Eyes
 import asyncio
 from messages.base import BaseNode, EventMessage
+from messages.robot import EyeMessage
 from messages.audio import AudioMessage
 from speech.vad_capture import VADCapture
 from speech.audio_player import AudioPlayer
@@ -17,19 +18,12 @@ class EyesServer:
         await self.client.subscribe(self.topic)
         asyncio.create_task(self.eyes.run())
 
-    def execute(self, goal):
-        print("Eye server received goal:", goal)
-        if goal['awake']:
-            self.eyes.set_awake(True)
-        else:
-            self.eyes.set_awake(False)
-
-        if goal['wide']:
-            self.eyes.set_wide_eyes(True)
-        else:
-            self.eyes.set_wide_eyes(False)
-
-        self.eyes.set_eyes_at(goal['x'])
+    async def execute(self, msg: dict):
+        request = EyeMessage(**msg)
+        print("Eye server received goal:", request)
+        self.eyes.set_awake(request.open)
+        self.eyes.set_wide_eyes(request.wide)
+        self.eyes.set_eyes_at(request.x)
 
     def event_reaction(self, event: EventMessage):
         if event.type == 'vad' and event.message == 'voice start':

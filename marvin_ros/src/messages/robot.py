@@ -7,3 +7,9 @@ class EyeMessage(BaseModel):
     open: bool = True
     wide: bool = False
     x: float = 0.0
+
+class NeckControlMessage(BaseModel):
+    """Message format for neck control commands."""
+    pan: float = 0.0
+    tilt: float = 0.0
+    speed: int = 2000

@@ -1,7 +1,8 @@
 from controllers.eyes import Eyes
+from controllers.neck import Neck
 import asyncio
 from messages.base import BaseNode, EventMessage
-from messages.robot import EyeMessage
+from messages.robot import EyeMessage, NeckControlMessage
 from messages.audio import AudioMessage
 from speech.vad_capture import VADCapture
 from speech.audio_player import AudioPlayer
@@ -57,6 +58,7 @@ async def main(args=None):
         capture = VADCapture(client, topic=args.audio_out)
         player = AudioPlayer()
         eyes = EyesServer(client)
+        neck = Neck()
 
         # Set up handler for incoming audio messages
         async def audio_callback(msg: dict):
@@ -73,6 +75,13 @@ async def main(args=None):
                 player.stop()
         client.handler("/events")(event_callback)
         await client.subscribe("/events")
+
+        # Neck control handler
+        async def neck_callback(msg: dict):
+            neck_msg = NeckControlMessage(**msg)
+            neck.set_neck(tilt=neck_msg.tilt, pan=neck_msg.pan, speed=neck_msg.speed)
+        client.handler("/marvin/neck")(neck_callback)
+        await client.subscribe("/marvin/neck")
 
         await asyncio.gather(
             capture.run(),

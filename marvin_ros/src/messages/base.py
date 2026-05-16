@@ -44,6 +44,7 @@ class BaseNode:
         self.sio = socketio.AsyncClient(logger=False, engineio_logger=False)
         self._handlers: dict[str, Callable] = {}
         self._connected = asyncio.Event()
+        self._running: Optional[asyncio.Event] = None
 
         @self.sio.event
         async def connect():
@@ -64,8 +65,12 @@ class BaseNode:
             room = data.get("room", "unknown")
             message = data.get("message", {})
             handler = self._handlers.get(room)
-            if handler:
-                await handler(message)
+            print(f"{self.node_name} received message on {room}: {message} handler: {handler}")
+            if handler is not None:
+                try:
+                    await handler(message)
+                except Exception as e:
+                    logger.error(f"{self.node_name} handler error on {room}: {e}")
             else:
                 logger.debug(f"{self.node_name} received message on {room} (no handler)")
 

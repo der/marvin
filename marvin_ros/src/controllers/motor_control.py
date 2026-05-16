@@ -80,12 +80,9 @@ class MotorController:
         if self.is_connected and self.client is not None:
             await self.client.write_gatt_char(self.rx, b'?', response=True)
             response = await self.client.read_gatt_char(self.tx)
-            if response is not None and response.decode().strip() == '1':
-                return True
-            else:
-                return False
+            return bool(response is not None and response.decode().strip() == '1')
 
-    def send(self, speed: int, dir: str, dist: int = None):
+    def send(self, speed: int, dir: str, dist: int | None = None):
         if dist is not None:
             self.queue.append(f"{speed}{dir}{dist}")
         else:

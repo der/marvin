@@ -58,6 +58,10 @@ class MotorServer:
             self.motor_controller.send(speed=motor_msg.speed, dir=motor_msg.dir, dist=motor_msg.dist)
         except Exception as e:
             print("Error processing motor message:", e)
+
+    def stop(self):
+        if self.motor_controller.is_moving():
+            self.motor_controller.send(speed=0, dir='s')
         
 
 async def main(args=None):
@@ -99,6 +103,7 @@ async def main(args=None):
             eyes.event_reaction(event)
             if (event.message == 'stop'):
                 player.stop()
+                motor.stop()            
         client.handler("/events")(event_callback)
         await client.subscribe("/events")
 

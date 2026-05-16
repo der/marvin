@@ -1,8 +1,9 @@
 from controllers.eyes import Eyes
 from controllers.neck import Neck
+from controllers.motor_control import MotorController
 import asyncio
 from messages.base import BaseNode, EventMessage
-from messages.robot import EyeMessage, NeckControlMessage
+from messages.robot import EyeMessage, NeckControlMessage, MotorControlMessage
 from messages.audio import AudioMessage
 from speech.vad_capture import VADCapture
 from speech.audio_player import AudioPlayer
@@ -20,11 +21,14 @@ class EyesServer:
         asyncio.create_task(self.eyes.run())
 
     async def execute(self, msg: dict):
-        request = EyeMessage(**msg)
-        print("Eye server received goal:", request)
-        self.eyes.set_awake(request.open)
-        self.eyes.set_wide_eyes(request.wide)
-        self.eyes.set_eyes_at(request.x)
+        try:
+            request = EyeMessage(**msg)
+            print("Eye server received goal:", request)
+            self.eyes.set_awake(request.open)
+            self.eyes.set_wide_eyes(request.wide)
+            self.eyes.set_eyes_at(request.x)
+        except Exception as e:
+            print("Error processing eye message:", e)
 
     def event_reaction(self, event: EventMessage):
         if event.type == 'vad' and event.message == 'voice start':
@@ -34,6 +38,27 @@ class EyesServer:
             self.eyes.set_wide_eyes(False)
         elif event.message == 'sleep':
             self.eyes.set_awake(False)
+
+class MotorServer:
+    def __init__(self, client: BaseNode):
+        self.client = client
+        self.motor_controller = MotorController()
+        self.topic = "/marvin/motor"
+        client.handler(self.topic)(self.execute)
+
+    async def run(self, lock):
+        print("Starting BLE connection to motor base in background")
+        asyncio.create_task(self.motor_controller.run(lock))
+        await self.client.subscribe(self.topic)
+
+    def execute(self, msg: dict):
+        try:
+            motor_msg = MotorControlMessage(**msg)
+            print("Motor server received goal:", motor_msg)
+            self.motor_controller.send(speed=motor_msg.speed, dir=motor_msg.dir, dist=motor_msg.dist)
+        except Exception as e:
+            print("Error processing motor message:", e)
+        
 
 async def main(args=None):
     parser = argparse.ArgumentParser(description='Marvin Nodes')
@@ -59,6 +84,7 @@ async def main(args=None):
         player = AudioPlayer()
         eyes = EyesServer(client)
         neck = Neck()
+        motor = MotorServer(client)
 
         # Set up handler for incoming audio messages
         async def audio_callback(msg: dict):
@@ -83,9 +109,11 @@ async def main(args=None):
         client.handler("/marvin/neck")(neck_callback)
         await client.subscribe("/marvin/neck")
 
+        lock = asyncio.Lock()  # Used to synchronize BLE connection setup when using multiple BLE connections
         await asyncio.gather(
             capture.run(),
             eyes.run(),
+            motor.run(lock),
             #client.run()
         )
     except (KeyboardInterrupt, asyncio.CancelledError):

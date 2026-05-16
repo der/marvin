@@ -1,4 +1,5 @@
 from controllers.eyes import Eyes
+from controllers.motor_control import MotorController
 import asyncio
 import time
 from src.speech.audio_player import AudioPlayer
@@ -45,12 +46,28 @@ class NeckServer:
         self.client = client
         self.server = roslibpy.Topic(client, '/marvin/neck', 'robot_msg/Neck')
 
-    async def start(self):
+    async def start(self, lock):
+        asyncio
         self.server.subscribe(self.execute)
 
     def execute(self, goal):
         print("Neck server received goal:", goal)
         # Implement neck control logic here based on the received goal
+
+class MotorServer:
+    def __init__(self, client):
+        self.client = client
+        self.motor_controller = MotorController()
+        self.server = roslibpy.Topic(client, '/marvin/motor', 'robot_msg/Motor')
+
+    async def start(self, lock):
+        print("Starting BLE connection to motor base in background")
+        asyncio.create_task(self.motor_controller.run(lock))
+        self.server.subscribe(self.execute)
+
+    def execute(self, goal):
+        print("Motor server received goal:", goal)
+        
 
 async def main(args=None):
     parser = argparse.ArgumentParser(description='ROS2 Marvin Nodes')
@@ -81,6 +98,11 @@ async def main(args=None):
         # Eye controller
         eye_server = EyesServer(client)
         asyncio.create_task(eye_server.start())
+
+        # Motor controller
+        motor_server = MotorServer(client)
+        lock = asyncio.Lock()  # Used to synchronize BLE connection setup when using multiple BLE connections
+        asyncio.create_task(motor_server.start(lock))
 
         # Event handling
         events_listener = roslibpy.Topic(client, '/events', 'std_msgs/String')

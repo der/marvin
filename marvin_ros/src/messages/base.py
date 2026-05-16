@@ -65,7 +65,6 @@ class BaseNode:
             room = data.get("room", "unknown")
             message = data.get("message", {})
             handler = self._handlers.get(room)
-            print(f"{self.node_name} received message on {room}: {message} handler: {handler}")
             if handler is not None:
                 try:
                     await handler(message)

@@ -51,7 +51,7 @@ class MotorServer:
         asyncio.create_task(self.motor_controller.run(lock))
         await self.client.subscribe(self.topic)
 
-    def execute(self, msg: dict):
+    async def execute(self, msg: dict):
         try:
             motor_msg = MotorControlMessage(**msg)
             print("Motor server received goal:", motor_msg)
@@ -60,8 +60,7 @@ class MotorServer:
             print("Error processing motor message:", e)
 
     def stop(self):
-        if self.motor_controller.is_moving():
-            self.motor_controller.send(speed=0, dir='s')
+        self.motor_controller.send(speed=0, dir='s')
         
 
 async def main(args=None):
@@ -83,8 +82,8 @@ async def main(args=None):
             print("Failed to connect to hub, retrying")
             await asyncio.sleep(5)
 
+    capture = VADCapture(client, topic=args.audio_out)
     try:
-        capture = VADCapture(client, topic=args.audio_out)
         player = AudioPlayer()
         eyes = EyesServer(client)
         neck = Neck()
@@ -124,7 +123,8 @@ async def main(args=None):
     except (KeyboardInterrupt, asyncio.CancelledError):
         print('Shutting down audio capture...')
     finally:
-        capture.cleanup()
+        if capture is not None:
+            capture.cleanup()
         await client.sio.disconnect()
 
 if __name__ == "__main__":

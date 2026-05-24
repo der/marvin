@@ -79,14 +79,7 @@ async def main(args=None):
 
     # Test camera
     camera = Camera()
-    time.sleep(1)
-    image = camera.get_latest_frame()
-    if image is not None:
-        print("Camera test successful, got image of size:", len(image))
-        with open("test_image.jpg", "wb") as f:
-            f.write(image)
-    else:
-        print("Camera test failed, no image received")
+    camera.start_thread()
 
     while not client.sio.connected:
         print(f"Connecting to hub at {hub_url}...")

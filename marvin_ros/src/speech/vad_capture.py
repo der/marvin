@@ -79,7 +79,7 @@ class VADCapture:
 
     def audio_callback(self, in_data, frame_count, time_info, status):
         """PyAudio callback function for processing audio chunks."""
-        if status:
+        if status and status != 2:  # Ignore overflow (status code 2)
             print(f'Audio stream status: {status}')
 
         audio_int16 = np.frombuffer(in_data, np.int16)

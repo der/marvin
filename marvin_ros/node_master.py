@@ -1,13 +1,17 @@
-from controllers.eyes import Eyes
-from controllers.neck import Neck
-from controllers.motor_control import MotorController
-import asyncio
-from messages.base import BaseNode, EventMessage
-from messages.robot import EyeMessage, NeckControlMessage, MotorControlMessage
-from messages.audio import AudioMessage
-from speech.vad_capture import VADCapture
-from speech.audio_player import AudioPlayer
 import argparse
+import asyncio
+import time
+
+from controllers.camera import Camera
+from controllers.eyes import Eyes
+from controllers.motor_control import MotorController
+from controllers.neck import Neck
+from messages.audio import AudioMessage
+from messages.base import BaseNode, EventMessage
+from messages.robot import EyeMessage, MotorControlMessage, NeckControlMessage
+from speech.audio_player import AudioPlayer
+from speech.vad_capture import VADCapture
+
 
 class EyesServer:
     def __init__(self, client: BaseNode):
@@ -72,6 +76,17 @@ async def main(args=None):
 
     hub_url = "http://minimax.local:5000" if args.host == 'minimax' else "http://next.local:5000"
     client = BaseNode(hub_url=hub_url, node_name="marvin")
+
+    # Test camera
+    camera = Camera()
+    time.sleep(1)
+    image = camera.get_latest_frame()
+    if image is not None:
+        print("Camera test successful, got image of size:", len(image))
+        with open("test_image.jpg", "wb") as f:
+            f.write(image)
+    else:
+        print("Camera test failed, no image received")
 
     while not client.sio.connected:
         print(f"Connecting to hub at {hub_url}...")

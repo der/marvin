@@ -74,7 +74,7 @@ class CameraServer:
         self.topic = "/marvin/camera"
         client.handler(self.topic)(self.handle_rpc)
 
-    async def handle_rpc(self, data) -> ImageMessage | None:
+    async def handle_rpc(self, data) -> dict:
         """Handle an RPC request for a camera frame."""
         print(f"Camera server received RPC request: {data}")
         resolution = data.get("resolution", "lores")

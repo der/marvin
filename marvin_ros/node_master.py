@@ -74,15 +74,16 @@ class CameraServer:
         self.topic = "/marvin/camera"
         client.handler(self.topic)(self.handle_rpc)
 
-    def handle_rpc(self, data) -> ImageMessage | None:
+    async def handle_rpc(self, data) -> ImageMessage | None:
         """Handle an RPC request for a camera frame."""
+        print(f"Camera server received RPC request: {data}")
         resolution = data.get("resolution", "lores")
         if resolution == "lores":
-            return ImageMessage(data = self.camera.get_latest_lores())
+            return {"format": "image/jpeg", "data": self.camera.get_latest_lores()}
         elif resolution == "full":
-            return ImageMessage(data = self.camera.get_latest_frame())
+            return {"format": "image/jpeg", "data": self.camera.get_latest_frame()}
         else:
-            return ImageMessage(error = f"Unknown resolution requested: {resolution}")
+            return {"error": f"Unknown resolution requested: {resolution}"}
     
     async def run(self):
         self.camera.start_thread()

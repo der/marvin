@@ -56,7 +56,7 @@ class Camera:
         """Get the latest low-resolution frame."""
         with self.frame_lock:
             if self.latest_lores is not None:
-                return ImageMessage(data=self._encode(self.latest_lores))
+                return self._encode(self.latest_lores)
             else:
                 return None
     
@@ -64,12 +64,13 @@ class Camera:
         """Get the latest high-resolution frame."""
         with self.frame_lock:
             if self.latest_frame is not None:
-                return ImageMessage(data=self._encode(self.latest_frame))
+                return self._encode(self.latest_frame)
             else:
                 return None
     
     def start_thread(self):
         """Start the camera capture thread."""
+        print("Starting camera capture thread")
         self.capture_thread = threading.Thread(target=self.capture_frames, daemon=True)
         self.capture_thread.start()
 

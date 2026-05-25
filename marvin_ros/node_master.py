@@ -32,6 +32,7 @@ class EyesServer:
             self.eyes.set_awake(request.open)
             self.eyes.set_wide_eyes(request.wide)
             self.eyes.set_eyes_at(request.x)
+            await self.client.publish_event("eyes", f"set eyes: open={request.open}, wide={request.wide}, x={request.x}")
         except Exception as e:
             print("Error processing eye message:", e)
 
@@ -61,6 +62,7 @@ class MotorServer:
             motor_msg = MotorControlMessage(**msg)
             print("Motor server received goal:", motor_msg)
             self.motor_controller.send(speed=motor_msg.speed, dir=motor_msg.dir, dist=motor_msg.dist)
+            await self.client.publish_event("motor", f"set motor: speed={motor_msg.speed}, dir={motor_msg.dir}, dist={motor_msg.dist}")
         except Exception as e:
             print("Error processing motor message:", e)
 
@@ -78,6 +80,7 @@ class CameraServer:
         """Handle an RPC request for a camera frame."""
         print(f"Camera server received RPC request: {data}")
         resolution = data.get("resolution", "lores")
+        await self.client.publish_event("camera", f"received RPC request for resolution: {resolution}")
         if resolution == "lores":
             return {"format": "image/jpeg", "data": self.camera.get_latest_lores()}
         elif resolution == "full":

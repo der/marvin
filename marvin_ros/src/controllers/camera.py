@@ -51,12 +51,12 @@ class Camera:
             print("Error encoding frame")
             return None
 
-    def get_latest_lores(self):
+    def get_latest_lores(self) -> bytes | None:
         """Get the latest low-resolution frame."""
         with self.frame_lock:
             return self._encode(self.latest_lores)
     
-    def get_latest_frame(self):
+    def get_latest_frame(self) -> bytes | None:
         """Get the latest high-resolution frame."""
         with self.frame_lock:
             return self._encode(self.latest_frame)

@@ -11,6 +11,7 @@ from messages.base import BaseNode, EventMessage
 from messages.robot import EyeMessage, MotorControlMessage, NeckControlMessage
 from speech.audio_player import AudioPlayer
 from speech.vad_capture import VADCapture
+from messages.image import ImageMessage
 
 
 class EyesServer:
@@ -66,6 +67,26 @@ class MotorServer:
     def stop(self):
         self.motor_controller.send(speed=0, dir='s')
         
+class CameraServer:
+    def __init__(self, client: BaseNode):
+        self.client = client
+        self.camera = Camera()
+        self.topic = "/marvin/camera"
+        client.handler(self.topic)(self.handle_rpc)
+
+    def handle_rpc(self, data) -> ImageMessage | None:
+        """Handle an RPC request for a camera frame."""
+        resolution = data.get("resolution", "lores")
+        if resolution == "lores":
+            return ImageMessage(data = self.camera.get_latest_lores())
+        elif resolution == "full":
+            return ImageMessage(data = self.camera.get_latest_frame())
+        else:
+            return ImageMessage(error = f"Unknown resolution requested: {resolution}")
+    
+    async def run(self):
+        self.camera.start_thread()
+        await self.client.subscribe(self.topic)
 
 async def main(args=None):
     parser = argparse.ArgumentParser(description='Marvin Nodes')
@@ -77,9 +98,6 @@ async def main(args=None):
     hub_url = "http://minimax.local:5000" if args.host == 'minimax' else "http://next.local:5000"
     client = BaseNode(hub_url=hub_url, node_name="marvin")
 
-    # Test camera
-    camera = Camera()
-    camera.start_thread()
 
     while not client.sio.connected:
         print(f"Connecting to hub at {hub_url}...")
@@ -121,11 +139,15 @@ async def main(args=None):
         client.handler("/marvin/neck")(neck_callback)
         await client.subscribe("/marvin/neck")
 
+        # Camera server
+        camera_server = CameraServer(client)
+
         lock = asyncio.Lock()  # Used to synchronize BLE connection setup when using multiple BLE connections
         await asyncio.gather(
             capture.run(),
             eyes.run(),
             motor.run(lock),
+            camera_server.run(),
             #client.run()
         )
     except (KeyboardInterrupt, asyncio.CancelledError):

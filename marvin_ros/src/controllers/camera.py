@@ -4,6 +4,7 @@ import time
 import threading
 from copy import copy
 import cv2
+from messages.image import ImageMessage
 
 class Camera:
     JPEG_QUALITY = 70 
@@ -51,15 +52,21 @@ class Camera:
             print("Error encoding frame")
             return None
 
-    def get_latest_lores(self):
+    def get_latest_lores(self) -> ImageMessage:
         """Get the latest low-resolution frame."""
         with self.frame_lock:
-            return self._encode(self.latest_lores)
+            if self.latest_lores is not None:
+                return ImageMessage(data=self._encode(self.latest_lores))
+            else:
+                return None
     
-    def get_latest_frame(self):
+    def get_latest_frame(self) -> ImageMessage:
         """Get the latest high-resolution frame."""
         with self.frame_lock:
-            return self._encode(self.latest_frame)
+            if self.latest_frame is not None:
+                return ImageMessage(data=self._encode(self.latest_frame))
+            else:
+                return None
     
     def start_thread(self):
         """Start the camera capture thread."""

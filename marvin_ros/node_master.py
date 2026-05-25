@@ -121,6 +121,9 @@ async def main(args=None):
         client.handler("/marvin/neck")(neck_callback)
         await client.subscribe("/marvin/neck")
 
+        # Camera RPC
+        # TODO
+
         lock = asyncio.Lock()  # Used to synchronize BLE connection setup when using multiple BLE connections
         await asyncio.gather(
             capture.run(),

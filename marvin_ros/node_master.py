@@ -150,7 +150,7 @@ async def main(args=None):
         await asyncio.gather(
             capture.run(),
             eyes.run(),
-            motor.run(lock),
+            #motor.run(lock),
             camera_server.run(),
             #client.run()
         )

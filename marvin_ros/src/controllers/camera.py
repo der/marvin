@@ -25,22 +25,19 @@ class Camera:
             self.camera.set_controls({"AfMode": controls.AfModeEnum.Continuous})
             self.camera.configure(self.config)
             self.camera.start()
+            self.callback_count: int = 0
+            self.callback_divisor: int = 1
+            self.callback = None
             time.sleep(0.5)
             print("Camera initialized")
         except Exception as e:
             print("Error initializing camera:", e)
             raise
 
-    
-    def capture_frames(self):
-        """Continuously capture frames from the camera."""
-        while self.stream_active:
-            (main, lores), metadata = self.camera.capture_arrays(["main", "lores"])
-            if lores is not None:
-                # print(f"Captured frame: {lores.shape}")
-                with self.frame_lock:
-                    self.latest_frame = copy(main)
-                    self.latest_lores = copy(lores)
+    def set_callback(self, callback, divisor=1):
+        """Set a callback function to be called with each divisor frame."""
+        self.callback = callback
+        self.callback_divisor = divisor
 
     def _encode(self, frame):
         """Encode a frame as JPEG."""
@@ -51,6 +48,21 @@ class Camera:
         else:
             print("Error encoding frame")
             return None
+    
+    def capture_frames(self):
+        """Continuously capture frames from the camera."""
+        while self.stream_active:
+            (main, lores), metadata = self.camera.capture_arrays(["main", "lores"])
+            if lores is not None:
+                # print(f"Captured frame: {lores.shape}")
+                with self.frame_lock:
+                    self.latest_frame = copy(main)
+                    self.latest_lores = copy(lores)
+                if self.callback is not None:
+                    self.callback_count += 1
+                    if self.callback_count >= self.callback_divisor:
+                        self.callback_count = 0
+                        self.callback(self._encode(self.latest_frame))
 
     def get_latest_lores(self) -> bytes | None:
         """Get the latest low-resolution frame."""

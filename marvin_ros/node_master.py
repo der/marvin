@@ -2,6 +2,8 @@ import argparse
 import asyncio
 import time
 
+from queue import Empty,Queue
+
 from controllers.camera import Camera
 from controllers.eyes import Eyes
 from controllers.motor_control import MotorController
@@ -73,8 +75,15 @@ class CameraServer:
     def __init__(self, client: BaseNode):
         self.client = client
         self.camera = Camera()
+        self.rpc_topic = "/marvin/camera-rpc"
+        client.handler(self.rpc_topic)(self.handle_rpc)
         self.topic = "/marvin/camera"
-        client.handler(self.topic)(self.handle_rpc)
+        self._image_queue = Queue()  # To allow async send from sync callback
+        self.camera.set_callback(self.image_callback, divisor=3)
+
+    def image_callback(self, image_data: bytes):
+        """Callback function to handle new image data."""
+        self._image_queue.put_nowait(image_data)
 
     async def handle_rpc(self, data) -> dict:
         """Handle an RPC request for a camera frame."""
@@ -87,10 +96,17 @@ class CameraServer:
             return {"format": "image/jpeg", "data": self.camera.get_latest_frame()}
         else:
             return {"error": f"Unknown resolution requested: {resolution}"}
-    
+        
     async def run(self):
         self.camera.start_thread()
         await self.client.subscribe(self.topic)
+        while True:
+            try:
+                image_data = self._image_queue.get_nowait()
+                await self.client.publish(self.topic, {"format": "image/jpeg", "data": image_data})
+                self._image_queue.task_done()
+            except Empty:
+                await asyncio.sleep(0.05)
 
 async def main(args=None):
     parser = argparse.ArgumentParser(description='Marvin Nodes')

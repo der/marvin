@@ -77,7 +77,7 @@ class CameraServer:
         client.handler(self.rpc_topic)(self.handle_rpc)
         self.topic = "/marvin/camera"
         self._image_queue = Queue()  # To allow async send from sync callback
-        self.camera.set_callback(self.image_callback, divisor=3)
+        self.camera.set_callback(self.image_callback, divisor=6)
 
     def image_callback(self, image_data: bytes):
         """Callback function to handle new image data."""
@@ -94,7 +94,7 @@ class CameraServer:
             return {"format": "image/jpeg", "data": self.camera.get_latest_frame()}
         else:
             return {"error": f"Unknown resolution requested: {resolution}"}
-        
+
     async def run(self):
         self.camera.start_thread()
         await self.client.subscribe(self.topic)

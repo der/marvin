@@ -1,9 +1,7 @@
 import argparse
 import asyncio
 import time
-
 from queue import Empty,Queue
-
 from controllers.camera import Camera
 from controllers.eyes import Eyes
 from controllers.motor_control import MotorController
@@ -70,7 +68,7 @@ class MotorServer:
 
     def stop(self):
         self.motor_controller.send(speed=0, dir='s')
-        
+
 class CameraServer:
     def __init__(self, client: BaseNode):
         self.client = client
@@ -110,12 +108,12 @@ class CameraServer:
 
 async def main(args=None):
     parser = argparse.ArgumentParser(description='Marvin Nodes')
-    parser.add_argument('--host', type=str, default='main', help='Choose host: minimax or main')
+    parser.add_argument('--host', type=str, default='main', help='Choose host: mini or main')
     parser.add_argument('--audio-out', type=str, default='/audio_stream', help='Topic to publish audio to')
     parser.add_argument('--audio-in', type=str, default='/speech_stream', help='Topic to subscribe for audio input')
     args = parser.parse_args()
 
-    hub_url = "http://minimax.local:5000" if args.host == 'minimax' else "http://next.local:5000"
+    hub_url = "http://minisforum.local:5000" if args.host == 'mini' else "http://next.local:5000"
     client = BaseNode(hub_url=hub_url, node_name="marvin")
 
 
@@ -166,7 +164,7 @@ async def main(args=None):
         await asyncio.gather(
             capture.run(),
             eyes.run(),
-            motor.run(lock),
+            #motor.run(lock),
             camera_server.run(),
             #client.run()
         )

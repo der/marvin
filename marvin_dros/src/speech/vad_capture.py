@@ -20,7 +20,7 @@ def int2float(sound):
 
 class VADCapture(Node):
 
-    def __init__(self, bus: Bus, device_index=-1, use_onnx=True, topic='audio_stream', threshold=0.9, pause_limit=10, lookback_limit=5):
+    def __init__(self, bus: Bus, device_index=-1, use_onnx=True, topic='/audio_stream', threshold=0.9, pause_limit=10, lookback_limit=5):
         super().__init__(bus)
         self.sample_rate = 16000
         self.channels = 1

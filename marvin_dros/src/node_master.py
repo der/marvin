@@ -16,7 +16,7 @@ class EyesServer(Node):
         self.eyes = Eyes()
         self.topic = "/marvin/eyes"
         self.subscribe_event(self.topic)
-        self.subscribe_event("events", self.event_reaction)
+        self.subscribe_event("/events", self.event_reaction)
 
     async def start_controller(self):
         return await self.eyes.run()

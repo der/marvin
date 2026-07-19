@@ -100,7 +100,7 @@ async def main():
     motor_server = MotorServer(bus, topic=motor_topic)
     neck_server = NeckServer(bus, topic=neck_topic)
     vad_capture = VADCapture(bus)
-    audio_player = AudioPlayer(topic='/speech_stream', device_name=args.audio_device)
+    audio_player = AudioPlayer(bus, topic='/speech_stream', device_name=args.audio_device)
 
     def event_handler(message):
         try:

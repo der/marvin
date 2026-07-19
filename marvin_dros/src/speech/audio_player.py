@@ -10,8 +10,8 @@ from messages.audio import AudioMessage
 from dros import Node, Bus
 
 class AudioPlayer(Node):
-    def __init__(self, topic:str='/audio_playback', device_name:str='Jabra'):
-        super().__init__()
+    def __init__(self,bus:Bus, topic:str='/audio_playback', device_name:str='Jabra'):
+        super().__init__(bus)
         self.device_name = device_name
         self.channels = 1
         self.sample_rate = 16000
@@ -80,7 +80,7 @@ class AudioPlayer(Node):
     def init_audio_stream(self):
         """Initialize the audio output stream."""
         try:
-            device_index = self.find_device()
+            device_index = self._find_device()
             
             self.stream = self.audio.open(
                 format=pyaudio.paInt16,

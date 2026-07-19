@@ -88,6 +88,9 @@ class MotorController:
         else:
             self.queue.append(f"{speed}{dir}")
 
+    def stop(self):
+        self.queue.append("0s")
+
     def shutdown(self):
         self.queue.append("s")
         self.queue.append("x")

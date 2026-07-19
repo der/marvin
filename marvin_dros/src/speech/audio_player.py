@@ -6,11 +6,13 @@ import pyaudio
 import numpy as np
 from threading import Lock
 from queue import Queue, Empty
-from messages import AudioMessage
+from messages.audio import AudioMessage
+from dros import Node, Bus
 
-class AudioPlayer:
-    def __init__(self):
-        self.device_name = "Jabra"
+class AudioPlayer(Node):
+    def __init__(self, topic:str='/audio_playback', device_name:str='Jabra'):
+        super().__init__()
+        self.device_name = device_name
         self.channels = 1
         self.sample_rate = 16000
         self.chunk_size = 512
@@ -21,6 +23,11 @@ class AudioPlayer:
         self.stream = None
         self.is_playing = False
         self.audio = pyaudio.PyAudio()
+        self.topic = topic
+
+    def startup(self):
+        """Subscribe to the audio playback topic."""
+        self.subscribe_event(self.topic, self.play_message)
         with self.stream_lock:
             self.init_audio_stream()
 
@@ -54,12 +61,12 @@ class AudioPlayer:
                 self.buffer_underruns += 1
             except Empty:
                 pass
-
+    
     def stop(self):
         with self.audio_queue.mutex:
             self.audio_queue.queue.clear()
 
-    def find_device(self) -> int:
+    def _find_device(self) -> int:
         """Find the audio output device index by name."""
         if self.device_name == 'default':
             return 0
@@ -116,10 +123,9 @@ class AudioPlayer:
             self.stream = None
             self.is_playing = False
 
-    def cleanup(self):
-        """Clean up all resources."""
+    def shutdown(self):
+        """Shutdown the audio player and clean up resources."""
         with self.stream_lock:
             self.cleanup_stream()
         if self.audio is not None:
             self.audio.terminate()
-

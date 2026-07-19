@@ -1,22 +1,23 @@
 # Master for all nodes on Marvin which connect as a client to the DROS hub.
 import argparse
 import asyncio
-import time
 
-from dros import Bus, Node, ClientTransport
-from messages.robot import EventMessage, EyeMessage, MotorControlMessage, NeckControlMessage
+from dros import Bus, ClientTransport, Node
+
 from controllers.eyes import Eyes
 from controllers.motor_control import MotorController
 from controllers.neck import Neck
+from messages.robot import EventMessage, EyeMessage, MotorControlMessage, NeckControlMessage
+from speech.audio_player import AudioPlayer
 from speech.vad_capture import VADCapture
 
+
 class EyesServer(Node):
-    def __init__(self, bus):
+    def __init__(self, bus, topic="/marvin/eyes"):
         super().__init__(bus)
         self.eyes = Eyes()
-        self.topic = "/marvin/eyes"
+        self.topic = topic
         self.subscribe_event(self.topic)
-        self.subscribe_event("/events", self.event_reaction)
 
     async def start_controller(self):
         return await self.eyes.run()
@@ -43,10 +44,10 @@ class EyesServer(Node):
             self.eyes.set_awake(False)
 
 class MotorServer(Node):
-    def __init__(self, bus):
+    def __init__(self, bus, topic="/marvin/motor"):
         super().__init__(bus)
         self.motor_controller = MotorController()
-        self.topic = "/marvin/motor"
+        self.topic = topic
         self.subscribe_event(self.topic)
 
     async def start_controller(self, lock):
@@ -62,11 +63,14 @@ class MotorServer(Node):
         except Exception as e:
             print("Error processing motor message:", e)
 
+    def stop_motor(self):
+        self.motor_controller.stop()
+
 class NeckServer(Node):
-    def __init__(self, bus):
+    def __init__(self, bus, topic="/marvin/neck"):
         super().__init__(bus)
         self.neck_controller = Neck()
-        self.topic = "/marvin/neck"
+        self.topic = topic
         self.subscribe_event(self.topic)
 
     def process(self, message):
@@ -79,17 +83,34 @@ class NeckServer(Node):
             print("Error processing neck message:", e)
 
 async def main():
-    parser = argparse.ArgumentParser(description="Marvin Eyes Server")
+    parser = argparse.ArgumentParser(description="Marvin Node Master")
+    parser.add_argument('--audio_device', type=str, default='Jabra', help='Audio output device name')
     parser.add_argument('--host', type=str, default='main', help='Choose host: minimax or main')
     args = parser.parse_args()
+
+    # Set default topics
+    eyes_topic = "/marvin/eyes"
+    motor_topic = "/marvin/motor"
+    neck_topic = "/marvin/neck"
 
     hub_url = "http://minimax.local:5000" if args.host == 'minimax' else "http://next.local:5000"
     bus = Bus(ClientTransport(hub_url))
 
-    eyes_server = EyesServer(bus)
-    motor_server = MotorServer(bus)
-    neck_server = NeckServer(bus)
+    eyes_server = EyesServer(bus, topic=eyes_topic)
+    motor_server = MotorServer(bus, topic=motor_topic)
+    neck_server = NeckServer(bus, topic=neck_topic)
     vad_capture = VADCapture(bus)
+    audio_player = AudioPlayer(topic='/speech_stream', device_name=args.audio_device)
+
+    def event_handler(message):
+        try:
+            eyes_server.event_reaction(message)
+            event = EventMessage.model_validate(message)
+            if event.message == 'stop':
+                audio_player.stop()
+                motor_server.stop_motor()
+        except Exception as e:
+            print("Error processing event message:", e)
 
     bus.start()
     try:

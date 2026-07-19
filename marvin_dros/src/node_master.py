@@ -18,6 +18,7 @@ class EyesServer(Node):
         self.eyes = Eyes()
         self.topic = topic
         self.subscribe_event(self.topic)
+        self.subscribe_event("/events", self.event_reaction)
 
     async def start_controller(self):
         return await self.eyes.run()
@@ -49,6 +50,7 @@ class MotorServer(Node):
         self.motor_controller = MotorController()
         self.topic = topic
         self.subscribe_event(self.topic)
+        self.subscribe_event("/events", self.event_handler)
 
     async def start_controller(self, lock):
         print("Starting BLE connection to motor base in background")
@@ -62,6 +64,14 @@ class MotorServer(Node):
             self.publish("/events", {"type": "motor", "message": f"set motor: speed={request.speed}, dir={request.dir}, dist={request.dist}"})
         except Exception as e:
             print("Error processing motor message:", e)
+
+    def event_handler(self, message: dict):
+        try:
+            event = EventMessage.model_validate(message)
+            if event.message == 'stop':
+                self.stop_motor()
+        except Exception as e:
+            print("Error processing event message:", e)
 
     def stop_motor(self):
         self.motor_controller.stop()
@@ -101,16 +111,6 @@ async def main():
     neck_server = NeckServer(bus, topic=neck_topic)
     vad_capture = VADCapture(bus)
     audio_player = AudioPlayer(bus, topic='/speech_stream', device_name=args.audio_device)
-
-    def event_handler(message):
-        try:
-            eyes_server.event_reaction(message)
-            event = EventMessage.model_validate(message)
-            if event.message == 'stop':
-                audio_player.stop()
-                motor_server.stop_motor()
-        except Exception as e:
-            print("Error processing event message:", e)
 
     bus.start()
     try:

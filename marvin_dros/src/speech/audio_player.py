@@ -7,10 +7,11 @@ import numpy as np
 from threading import Lock
 from queue import Queue, Empty
 from messages.audio import AudioMessage
+from messages.robot import EventMessage
 from dros import Node, Bus
 
 class AudioPlayer(Node):
-    def __init__(self,bus:Bus, topic:str='/audio_playback', device_name:str='Jabra'):
+    def __init__(self,bus:Bus, topic:str='/speech_stream', device_name:str='Jabra'):
         super().__init__(bus)
         self.device_name = device_name
         self.channels = 1
@@ -27,11 +28,14 @@ class AudioPlayer(Node):
 
     def startup(self):
         """Subscribe to the audio playback topic."""
+        print(f"AudioPlayer subscribing to topic: {self.topic}")
         self.subscribe_event(self.topic, self.play_message)
+        self.subscribe_event("/events", self.event_handler)
         with self.stream_lock:
             self.init_audio_stream()
 
-    def play_message(self, msg: AudioMessage):
+    def play_message(self, incoming_msg: dict):
+        msg = AudioMessage.model_validate(incoming_msg)
         if msg.info.format != self.format:
             print(
                 f'Audio format set to: {msg.info.format}, '
@@ -62,6 +66,14 @@ class AudioPlayer(Node):
             except Empty:
                 pass
     
+    def event_handler(self, message):
+        try:
+            event = EventMessage.model_validate(message)
+            if event.message == 'stop':
+                self.stop()
+        except Exception as e:
+            print("Error processing event message:", e)
+
     def stop(self):
         with self.audio_queue.mutex:
             self.audio_queue.queue.clear()

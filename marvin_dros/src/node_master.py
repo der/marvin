@@ -10,7 +10,7 @@ from controllers.neck import Neck
 from messages.robot import EventMessage, EyeMessage, MotorControlMessage, NeckControlMessage
 from speech.audio_player import AudioPlayer
 from speech.vad_capture import VADCapture
-
+from controllers.camera import CameraController
 
 class EyesServer(Node):
     def __init__(self, bus, topic="/marvin/eyes"):
@@ -92,6 +92,25 @@ class NeckServer(Node):
         except Exception as e:
             print("Error processing neck message:", e)
 
+class CameraServer(Node):
+    def __init__(self, bus, topic="/marvin/camera", rate_divisor=1):
+        super().__init__(bus)
+        self.camera_controller = CameraController()
+        self.topic = topic
+        self.rate_divisor = rate_divisor
+
+    def startup(self):
+        self.camera_controller.set_callback(self.publish_frame, divisor=self.rate_divisor)
+        self.camera_controller.start_thread()
+        print("Camera started, publishing frames to topic:", self.topic)
+
+    def shutdown(self):
+        self.camera_controller.stop()
+        print("Camera stopped.")
+
+    def publish_frame(self, frame: bytes):
+        self.publish(self.topic, {"format": "image/jpeg", "data": frame})
+
 async def main():
     parser = argparse.ArgumentParser(description="Marvin Node Master")
     parser.add_argument('--audio_device', type=str, default='Jabra', help='Audio output device name')
@@ -111,6 +130,7 @@ async def main():
     neck_server = NeckServer(bus, topic=neck_topic)
     vad_capture = VADCapture(bus)
     audio_player = AudioPlayer(bus, topic='/speech_stream', device_name=args.audio_device)
+    camera_server = CameraServer(bus, topic='/marvin/camera', rate_divisor=1)
 
     bus.start()
     try:

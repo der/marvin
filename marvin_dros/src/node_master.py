@@ -10,7 +10,7 @@ from controllers.neck import Neck
 from messages.robot import EventMessage, EyeMessage, MotorControlMessage, NeckControlMessage
 from speech.audio_player import AudioPlayer
 from speech.vad_capture import VADCapture
-from controllers.camera import CameraController
+from controllers.camera import Camera
 
 class EyesServer(Node):
     def __init__(self, bus, topic="/marvin/eyes"):
@@ -95,7 +95,7 @@ class NeckServer(Node):
 class CameraServer(Node):
     def __init__(self, bus, topic="/marvin/camera", rate_divisor=1):
         super().__init__(bus)
-        self.camera_controller = CameraController()
+        self.camera_controller = Camera()
         self.topic = topic
         self.rate_divisor = rate_divisor
 

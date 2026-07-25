@@ -11,6 +11,7 @@ from messages.robot import EventMessage, EyeMessage, MotorControlMessage, NeckCo
 from speech.audio_player import AudioPlayer
 from speech.vad_capture import VADCapture
 from controllers.camera import Camera
+from controllers.dist_heading_sensor import DistanceHeadingMonitor
 
 class EyesServer(Node):
     def __init__(self, bus, topic="/marvin/eyes"):
@@ -43,6 +44,20 @@ class EyesServer(Node):
             self.eyes.set_wide_eyes(False)
         elif event.message == 'sleep':
             self.eyes.set_awake(False)
+
+class DistanceHeadingServer(Node):
+    def __init__(self, bus, topic="/marvin/dist_heading"):
+        super().__init__(bus)
+        self.sensor = DistanceHeadingMonitor()
+        self.topic = topic
+        self.sensor.add_callback(self.publish_sensor_data)
+
+    async def start_controller(self, lock):
+        print("Starting BLE connection to distance and heading sensor in background")
+        asyncio.create_task(self.sensor.run(lock))
+
+    def publish_sensor_data(self, dist, heading, pitch):
+        self.publish(self.topic, {"dist": dist, "heading": heading, "pitch": pitch})
 
 class MotorServer(Node):
     def __init__(self, bus, topic="/marvin/motor"):
@@ -128,6 +143,7 @@ async def main():
     eyes_server = EyesServer(bus, topic=eyes_topic)
     motor_server = MotorServer(bus, topic=motor_topic)
     neck_server = NeckServer(bus, topic=neck_topic)
+    dist_heading_server = DistanceHeadingServer(bus, topic="/marvin/dist_heading")
     vad_capture = VADCapture(bus)
     audio_player = AudioPlayer(bus, topic='/speech_stream', device_name=args.audio_device)
     camera_server = CameraServer(bus, topic='/marvin/camera', rate_divisor=1)
@@ -138,6 +154,7 @@ async def main():
             lock = asyncio.Lock()  # Used to synchronize BLE connection setup when using multiple BLE connections
             task1 = tg.create_task(eyes_server.start_controller())
             task2 = tg.create_task(motor_server.start_controller(lock))
+            task3 = tg.create_task(dist_heading_server.start_controller(lock))
     except KeyboardInterrupt:
         print("Shutting down...")
     except Exception as e:

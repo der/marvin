@@ -35,6 +35,9 @@ dev = [
   "pytest",
 ]
 
+[project.scripts]
+marvin = "node_master:main"
+
 [tool.ruff]
 target-version = "py311"
 line-length = 120

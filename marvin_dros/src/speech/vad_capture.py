@@ -20,12 +20,12 @@ def int2float(sound):
 
 class VADCapture(Node):
 
-    def __init__(self, bus: Bus, device_index=-1, use_onnx=True, topic='/audio_stream', threshold=0.9, pause_limit=10, lookback_limit=5):
+    def __init__(self, bus: Bus, device_name="Jabbra", use_onnx=True, topic='/audio_stream', threshold=0.9, pause_limit=10, lookback_limit=5):
         super().__init__(bus)
         self.sample_rate = 16000
         self.channels = 1
         self.chunk_size = 512
-        self.device_index = device_index
+        self.device_name = device_name
         self.topic = topic
         self.threshold = threshold
         self.use_onnx = use_onnx
@@ -47,10 +47,21 @@ class VADCapture(Node):
         self.model = load_silero_vad(onnx=self.use_onnx, opset_version=15)
         print("VAD model loaded successfully")
 
+    def _find_device(self) -> int:
+        """Find the audio input device index by name."""
+        if self.device_name == 'default':
+            return 0
+        for i in range(self.audio.get_device_count()):
+            device_info = self.audio.get_device_info_by_index(i)
+            if self.device_name in device_info.get('name', '') and device_info.get('maxInputChannels', 0) > 0:
+                print(f'Found audio input device: {device_info["name"]} (index {i})')
+                return i
+        return 0
+
     def startup(self):
         """Initialize the audio input stream."""
         try:
-            device_index = self.device_index if self.device_index >= 0 else None
+            device_index = self._find_device() if self.device_name != 'default' else None
 
             self.stream = self.audio.open(
                 format=pyaudio.paInt16,

@@ -77,7 +77,7 @@ class DistanceHeadingMonitor:
     async def connect(self, lock):
         async with contextlib.AsyncExitStack() as stack:
             async with lock:
-                print('Scanning for devices...')
+                print(f'Scanning for {DEVICE_NAME} ...')
                 self.device = await BleakScanner.find_device_by_name(DEVICE_NAME, 36000.0)
                 if (self.device is None):
                     print('Device not found')

@@ -46,10 +46,12 @@ class EyesServer(Node):
             self.eyes.set_awake(False)
 
 class DistanceHeadingServer(Node):
-    def __init__(self, bus, topic="/marvin/dist_heading"):
+    def __init__(self, bus, topic="/marvin/dist_heading", divisor=1):
         super().__init__(bus)
         self.sensor = DistanceHeadingMonitor()
         self.topic = topic
+        self.divisor = divisor
+        self.counter = 0
         self.sensor.add_callback(self.publish_sensor_data)
 
     async def start_controller(self, lock):
@@ -57,7 +59,9 @@ class DistanceHeadingServer(Node):
         asyncio.create_task(self.sensor.run(lock))
 
     def publish_sensor_data(self, dist, heading, pitch):
-        self.publish(self.topic, {"dist": dist, "heading": heading, "pitch": pitch})
+        self.counter += 1
+        if self.counter % self.divisor == 0:
+            self.publish(self.topic, {"dist": dist, "heading": heading, "pitch": pitch})
 
 class MotorServer(Node):
     def __init__(self, bus, topic="/marvin/motor"):
@@ -126,7 +130,7 @@ class CameraServer(Node):
     def publish_frame(self, frame: bytes):
         self.publish(self.topic, {"format": "image/jpeg", "data": frame})
 
-async def main():
+async def main_loop():
     parser = argparse.ArgumentParser(description="Marvin Node Master")
     parser.add_argument('--audio_device', type=str, default='Jabra', help='Audio output device name')
     parser.add_argument('--host', type=str, default='main', help='Choose host: minimax or main')
@@ -143,8 +147,8 @@ async def main():
     eyes_server = EyesServer(bus, topic=eyes_topic)
     motor_server = MotorServer(bus, topic=motor_topic)
     neck_server = NeckServer(bus, topic=neck_topic)
-    dist_heading_server = DistanceHeadingServer(bus, topic="/marvin/dist_heading")
-    vad_capture = VADCapture(bus)
+    dist_heading_server = DistanceHeadingServer(bus, topic="/marvin/dist_heading", divisor=3)
+    vad_capture = VADCapture(bus, device_name=args.audio_device, topic='/audio_stream')
     audio_player = AudioPlayer(bus, topic='/speech_stream', device_name=args.audio_device)
     camera_server = CameraServer(bus, topic='/marvin/camera', rate_divisor=1)
 
@@ -162,5 +166,8 @@ async def main():
     finally:
         bus.stop()
 
+def main():
+    asyncio.run(main_loop())
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

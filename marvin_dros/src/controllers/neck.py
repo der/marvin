@@ -43,7 +43,7 @@ class Neck:
             pan = self.servo.ReadPosition(1)
             tilt = int((tilt - 2048) * 100 / self.TILT_RANGE)
             pan = int((pan - 2048) * 100 / self.PAN_RANGE)
-            logger.info(f"Neck position read as tilt={tilt}, pan={pan}")
+            logger.debug(f"Neck position read as tilt={tilt}, pan={pan}")
             return tilt, pan
         except Exception as e:
             logger.error(f"Error reading neck position: {e}")

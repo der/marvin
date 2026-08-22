@@ -116,20 +116,28 @@ class MotorServer(Node):
         
 
 class NeckServer(Node):
-    def __init__(self, bus, topic="/marvin/neck"):
-        super().__init__(bus)
+    def __init__(self, bus, topic="/marvin/neck", out_topic="/marvin/neck-position", interval=0.05):
+        super().__init__(bus, interval=interval)
         self.neck_controller = Neck()
         self.topic = topic
+        self.out_topic = out_topic
         self.subscribe_event(self.topic)
+
+    def startup(self):
+        self.neck_controller.set_neck(tilt=0, pan=0, speed=2000)
 
     def process(self, message):
         try:
             request = NeckControlMessage.model_validate(message)
             print("Neck server received goal:", request)
-            self.neck_controller.set_neck(tilt=request.tilt, pan=request.pan, speed=request.speed)
+            self.neck_controller.set_neck(tilt=int(request.tilt), pan=int(request.pan), speed=int(request.speed))
             self.publish("/events", {"type": "neck", "message": f"set neck: pan={request.pan}, tilt={request.tilt}, speed={request.speed}"})
         except Exception as e:
             print("Error processing neck message:", e)
+
+    def tick(self):
+        tilt, pan = self.neck_controller.get_neck()
+        self.publish(self.out_topic, {"tilt": tilt, "pan": pan})
 
 class CameraServer(Node):
     def __init__(self, bus, topic="/marvin/camera", rate_divisor=1):

@@ -64,12 +64,13 @@ class DistanceHeadingServer(Node):
             self.publish(self.topic, {"dist": dist, "heading": heading, "pitch": pitch})
 
 class MotorServer(Node):
-    def __init__(self, bus, topic="/marvin/motor"):
-        super().__init__(bus)
+    def __init__(self, bus, topic="/marvin/motor", interval=0.05):
+        super().__init__(bus, interval=interval)
         self.motor_controller = MotorController()
         self.topic = topic
         self.subscribe_event(self.topic)
         self.subscribe_event("/events", self.event_handler)
+        self.was_moving = False  # Track if the motor was moving in the last tick
 
     async def start_controller(self, lock):
         print("Starting BLE connection to motor base in background")
@@ -94,6 +95,17 @@ class MotorServer(Node):
 
     def stop_motor(self):
         self.motor_controller.stop()
+
+    def tick(self):
+        if self.motor_controller.is_moving():
+            if not self.was_moving:
+                self.publish("/events", {"type": "motor", "message": "moving start"})
+                self.was_moving = True
+        else:
+            if self.was_moving:
+                self.publish("/events", {"type": "motor", "message": "moving stop"})
+                self.was_moving = False
+        
 
 class NeckServer(Node):
     def __init__(self, bus, topic="/marvin/neck"):

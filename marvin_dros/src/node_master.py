@@ -116,7 +116,7 @@ class MotorServer(Node):
         
 
 class NeckServer(Node):
-    def __init__(self, bus, topic="/marvin/neck", out_topic="/marvin/neck-position", interval=0.05):
+    def __init__(self, bus, topic="/marvin/neck", out_topic="/marvin/neck_position", interval=0.05):
         super().__init__(bus, interval=interval)
         self.neck_controller = Neck()
         self.topic = topic

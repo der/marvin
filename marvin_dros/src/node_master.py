@@ -71,10 +71,18 @@ class MotorServer(Node):
         self.subscribe_event(self.topic)
         self.subscribe_event("/events", self.event_handler)
         self.was_moving = False  # Track if the motor was moving in the last tick
+        self._is_moving_cached = False  # Cached result of async is_moving(), updated by background task
 
     async def start_controller(self, lock):
         print("Starting BLE connection to motor base in background")
         asyncio.create_task(self.motor_controller.run(lock))
+        asyncio.create_task(self._poll_is_moving())
+
+    async def _poll_is_moving(self):
+        # Bridges the async motor_controller.is_moving() into a value tick() can read synchronously.
+        while True:
+            self._is_moving_cached = await self.motor_controller.is_moving()
+            await asyncio.sleep(0.05)
 
     def process(self, message):
         try:
@@ -97,7 +105,7 @@ class MotorServer(Node):
         self.motor_controller.stop()
 
     def tick(self):
-        if self.motor_controller.is_moving():
+        if self._is_moving_cached:
             if not self.was_moving:
                 self.publish("/events", {"type": "motor", "message": "moving start"})
                 self.was_moving = True

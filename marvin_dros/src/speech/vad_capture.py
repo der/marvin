@@ -20,7 +20,7 @@ def int2float(sound):
 
 class VADCapture(Node):
 
-    def __init__(self, bus: Bus, device_name="respeaker", use_onnx=True, topic='/audio_stream', threshold=0.9, pause_limit=8, lookback_limit=5):
+    def __init__(self, bus: Bus, device_name="respeaker", use_onnx=True, topic='/audio_stream', threshold=0.9, pause_limit=8, lookback_limit=8):
         super().__init__(bus)
         self.sample_rate = 16000
         self.channels = 1
@@ -129,7 +129,8 @@ class VADCapture(Node):
                         info=self.info,
                         data=AudioData(int16_data=audio_int16.tolist()))
                     self.publish(self.topic, audio.model_dump())
-            self.lookback_queue.append(audio_int16)
+            else:
+                self.lookback_queue.append(audio_int16)
 
         return (None, pyaudio.paContinue)
 

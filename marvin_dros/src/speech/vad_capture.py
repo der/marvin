@@ -123,6 +123,12 @@ class VADCapture(Node):
                         event='end_utterance')
                     self.publish(self.topic, audio.model_dump())
                     self.is_voice = False
+                else:
+                    # Continue sending audio data during the pause until we are sure it's ended
+                    audio = AudioMessage(
+                        info=self.info,
+                        data=AudioData(int16_data=audio_int16.tolist()))
+                    self.publish(self.topic, audio.model_dump())
             self.lookback_queue.append(audio_int16)
 
         return (None, pyaudio.paContinue)

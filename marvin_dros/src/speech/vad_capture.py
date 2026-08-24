@@ -20,7 +20,7 @@ def int2float(sound):
 
 class VADCapture(Node):
 
-    def __init__(self, bus: Bus, device_name="Jabbra", use_onnx=True, topic='/audio_stream', threshold=0.9, pause_limit=10, lookback_limit=5):
+    def __init__(self, bus: Bus, device_name="respeaker", use_onnx=True, topic='/audio_stream', threshold=0.9, pause_limit=10, lookback_limit=5):
         super().__init__(bus)
         self.sample_rate = 16000
         self.channels = 1
@@ -53,7 +53,7 @@ class VADCapture(Node):
             return 0
         for i in range(self.audio.get_device_count()):
             device_info = self.audio.get_device_info_by_index(i)
-            if self.device_name in device_info.get('name', '') and device_info.get('maxInputChannels', 0) > 0:
+            if self.device_name.lower() in str(device_info.get('name', '')).lower() and int(device_info.get('maxInputChannels', 0)) > 0:
                 print(f'Found audio input device: {device_info["name"]} (index {i})')
                 return i
         return 0

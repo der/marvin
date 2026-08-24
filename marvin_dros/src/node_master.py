@@ -160,7 +160,8 @@ class CameraServer(Node):
 
 async def main_loop():
     parser = argparse.ArgumentParser(description="Marvin Node Master")
-    parser.add_argument('--audio_device', type=str, default='Jabra', help='Audio output device name')
+#    parser.add_argument('--audio_device', type=str, default='Jabra', help='Audio output device name')
+    parser.add_argument('--audio_device', type=str, default='respeaker', help='Audio output device name')
     parser.add_argument('--host', type=str, default='main', help='Choose host: minimax or main')
     args = parser.parse_args()
 

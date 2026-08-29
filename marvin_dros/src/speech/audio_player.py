@@ -11,7 +11,7 @@ from messages.robot import EventMessage
 from dros import Node, Bus
 
 class AudioPlayer(Node):
-    def __init__(self,bus:Bus, topic:str='/speech_stream', device_name:str='Jabra'):
+    def __init__(self,bus:Bus, topic:str='/speech_stream', device_name:str='USB Audio'):
         super().__init__(bus)
         self.device_name = device_name
         self.channels = 1
@@ -84,7 +84,7 @@ class AudioPlayer(Node):
             return 0
         for i in range(self.audio.get_device_count()):
             device_info = self.audio.get_device_info_by_index(i)
-            if self.device_name in device_info.get('name', '') and device_info.get('maxOutputChannels', 0) > 0:
+            if str(device_info.get('name', '')).lower().find(self.device_name.lower()) >= 0 and device_info.get('maxOutputChannels', 0) > 0:
                 print(f'Found audio output device: {device_info["name"]} (index {i})')
                 return i
         return 0

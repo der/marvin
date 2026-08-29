@@ -46,5 +46,5 @@ class Neck:
             logger.debug(f"Neck position read as tilt={tilt}, pan={pan}")
             return tilt, pan
         except Exception as e:
-            logger.error(f"Error reading neck position: {e}")
+            logger.debug(f"Error reading neck position: {e}")
             return 0, 0

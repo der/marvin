@@ -34,7 +34,7 @@ class EyesServer(Node):
             self.publish("/events", {"type": "eyes", "message": f"set eyes: open={request.open}, wide={request.wide}, x={request.x}"})
         except Exception as e:
             print("Error processing eye message:", e)
-    
+
     def event_reaction(self, message: dict):
         event = EventMessage.model_validate(message)
         if event.type == 'vad' and event.message == 'voice start':
@@ -113,7 +113,6 @@ class MotorServer(Node):
             if self.was_moving:
                 self.publish("/events", {"type": "motor", "message": "moving stop"})
                 self.was_moving = False
-        
 
 class NeckServer(Node):
     def __init__(self, bus, topic="/marvin/neck", out_topic="/marvin/neck_position", interval=0.05):
@@ -161,7 +160,8 @@ class CameraServer(Node):
 async def main_loop():
     parser = argparse.ArgumentParser(description="Marvin Node Master")
 #    parser.add_argument('--audio_device', type=str, default='Jabra', help='Audio output device name')
-    parser.add_argument('--audio_device', type=str, default='respeaker', help='Audio output device name')
+    parser.add_argument('--audio_in', type=str, default='respeaker', help='Audio input device name')
+    parser.add_argument('--audio_out', type=str, default='UACDemoV10', help='Audio output device name')
     parser.add_argument('--host', type=str, default='main', help='Choose host: minimax or main')
     args = parser.parse_args()
 
@@ -170,15 +170,15 @@ async def main_loop():
     motor_topic = "/marvin/motor"
     neck_topic = "/marvin/neck"
 
-    hub_url = "http://minimax.local:5000" if args.host == 'minimax' else "http://next.local:5000"
+    hub_url = "http://minisforum.local:5000" if args.host == 'minimax' else "http://next.local:5000"
     bus = Bus(ClientTransport(hub_url))
 
     eyes_server = EyesServer(bus, topic=eyes_topic)
     motor_server = MotorServer(bus, topic=motor_topic)
     neck_server = NeckServer(bus, topic=neck_topic)
     dist_heading_server = DistanceHeadingServer(bus, topic="/marvin/dist_heading", divisor=3)
-    vad_capture = VADCapture(bus, device_name=args.audio_device, topic='/audio_stream')
-    audio_player = AudioPlayer(bus, topic='/speech_stream', device_name=args.audio_device)
+    vad_capture = VADCapture(bus, device_name=args.audio_in, topic='/audio_stream')
+    audio_player = AudioPlayer(bus, topic='/speech_stream', device_name=args.audio_out)
     camera_server = CameraServer(bus, topic='/marvin/camera', rate_divisor=1)
 
     bus.start()

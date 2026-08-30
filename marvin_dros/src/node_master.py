@@ -161,7 +161,8 @@ async def main_loop():
     parser = argparse.ArgumentParser(description="Marvin Node Master")
 #    parser.add_argument('--audio_device', type=str, default='Jabra', help='Audio output device name')
     parser.add_argument('--audio_in', type=str, default='respeaker', help='Audio input device name')
-    parser.add_argument('--audio_out', type=str, default='UACDemoV10', help='Audio output device name')
+    parser.add_argument('--audio_out', type=str, default='UACDemo', help='Audio output device name')
+    parser.add_argument('--audio_out_rate', type=int, default=48000, help='Audio output sample rate in Hz (device native rate)')
     parser.add_argument('--host', type=str, default='main', help='Choose host: minimax or main')
     args = parser.parse_args()
 
@@ -178,7 +179,7 @@ async def main_loop():
     neck_server = NeckServer(bus, topic=neck_topic)
     dist_heading_server = DistanceHeadingServer(bus, topic="/marvin/dist_heading", divisor=3)
     vad_capture = VADCapture(bus, device_name=args.audio_in, topic='/audio_stream')
-    audio_player = AudioPlayer(bus, topic='/speech_stream', device_name=args.audio_out)
+    audio_player = AudioPlayer(bus, topic='/speech_stream', device_name=args.audio_out, output_sample_rate=args.audio_out_rate)
     camera_server = CameraServer(bus, topic='/marvin/camera', rate_divisor=1)
 
     bus.start()

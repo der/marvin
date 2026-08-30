@@ -15,12 +15,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message
 logger = logging.getLogger("AudioPlayer")
 
 class AudioPlayer(Node):
-    def __init__(self,bus:Bus, topic:str='/speech_stream', device_name:str='UACDemoV10'):
+    def __init__(self,bus:Bus, topic:str='/speech_stream', device_name:str='UACDemo', output_sample_rate:int=48000):
         super().__init__(bus)
         self.device_name = device_name
         self.channels = 1
         self.sample_rate = 16000
-        self.chunk_size = 512
+        self.output_sample_rate = output_sample_rate
+        self.input_chunk_size = 512
+        self.chunk_size = int(round(self.input_chunk_size * self.output_sample_rate / self.sample_rate))
         self.format: str = '16kmono'
         self.buffer_underruns = 0
         self.audio_queue = Queue(maxsize=256)
@@ -50,13 +52,16 @@ class AudioPlayer(Node):
                 self.format = msg.info.format
                 self.sample_rate = msg.info.sample_rate
                 self.channels = msg.info.num_channels
-                self.chunk_size = msg.info.chunk_size
+                self.input_chunk_size = msg.info.chunk_size
+                self.chunk_size = int(round(self.input_chunk_size * self.output_sample_rate / self.sample_rate))
                 if self.stream is not None:
                     self.cleanup_stream()
                 self.init_audio_stream()
 
-        # Convert message data to numpy array
+        # Convert message data to numpy array and resample to the device's output rate
         audio_data = np.array(msg.data.int16_data, dtype=np.int16)
+        if self.sample_rate != self.output_sample_rate:
+            audio_data = self._resample(audio_data, self.sample_rate, self.output_sample_rate)
 
         # Try to add to queue
         try:
@@ -70,6 +75,24 @@ class AudioPlayer(Node):
             except Empty:
                 pass
     
+    @staticmethod
+    def _resample(x: np.ndarray, in_rate: int, out_rate: int) -> np.ndarray:
+        """Resample an int16 mono buffer to a new rate using linear interpolation.
+
+        Block endpoints are preserved (out[0]=in[0], out[-1]=in[-1]) so that
+        consecutive streaming blocks tile continuously without boundary clicks.
+        """
+        n_in = x.shape[0]
+        if n_in == 0:
+            return x.copy()
+        n_out = max(1, int(round(n_in * out_rate / in_rate)))
+        if n_out == 1:
+            return np.array([x[0]], dtype=np.int16)
+        src = np.arange(n_in, dtype=np.float64)
+        dst = np.linspace(0.0, float(n_in - 1), n_out)
+        resampled = np.interp(dst, src, x.astype(np.float32))
+        return np.clip(resampled, -32768, 32767).astype(np.int16)
+
     def event_handler(self, message):
         try:
             event = EventMessage.model_validate(message)
@@ -102,7 +125,7 @@ class AudioPlayer(Node):
             self.stream = self.audio.open(
                 format=pyaudio.paInt16,
                 channels=self.channels,
-                rate=self.sample_rate,
+                rate=self.output_sample_rate,
                 output=True,
                 frames_per_buffer=self.chunk_size,
                 output_device_index=device_index,

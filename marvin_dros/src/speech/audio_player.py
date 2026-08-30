@@ -2,6 +2,7 @@
 Audio player node for Marvin speech project.
 """
 
+import logging
 import pyaudio
 import numpy as np
 from threading import Lock
@@ -10,8 +11,11 @@ from messages.audio import AudioMessage
 from messages.robot import EventMessage
 from dros import Node, Bus
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
+logger = logging.getLogger("AudioPlayer")
+
 class AudioPlayer(Node):
-    def __init__(self,bus:Bus, topic:str='/speech_stream', device_name:str='USB Audio'):
+    def __init__(self,bus:Bus, topic:str='/speech_stream', device_name:str='UACDemoV10'):
         super().__init__(bus)
         self.device_name = device_name
         self.channels = 1
@@ -28,7 +32,7 @@ class AudioPlayer(Node):
 
     def startup(self):
         """Subscribe to the audio playback topic."""
-        print(f"AudioPlayer subscribing to topic: {self.topic}")
+        logger.info(f"AudioPlayer subscribing to topic: {self.topic}")
         self.subscribe_event(self.topic, self.play_message)
         self.subscribe_event("/events", self.event_handler)
         with self.stream_lock:
@@ -37,7 +41,7 @@ class AudioPlayer(Node):
     def play_message(self, incoming_msg: dict):
         msg = AudioMessage.model_validate(incoming_msg)
         if msg.info.format != self.format:
-            print(
+            logger.info(
                 f'Audio format set to: {msg.info.format}, '
                 f'{msg.info.sample_rate}Hz, {msg.info.num_channels}ch, '
                 f'{msg.info.chunk_size} samples/chunk'
@@ -72,7 +76,7 @@ class AudioPlayer(Node):
             if event.message == 'stop':
                 self.stop()
         except Exception as e:
-            print("Error processing event message:", e)
+            logger.error("Error processing event message:", exc_info=e)
 
     def stop(self):
         with self.audio_queue.mutex:
@@ -85,8 +89,9 @@ class AudioPlayer(Node):
         for i in range(self.audio.get_device_count()):
             device_info = self.audio.get_device_info_by_index(i)
             if str(device_info.get('name', '')).lower().find(self.device_name.lower()) >= 0 and device_info.get('maxOutputChannels', 0) > 0:
-                print(f'Found audio output device: {device_info["name"]} (index {i})')
+                logger.info(f'Found audio output device: {device_info["name"]} (index {i})')
                 return i
+        logger.warning(f'Audio output device "{self.device_name}" not found. Using default device.')
         return 0
 
     def init_audio_stream(self):
@@ -107,16 +112,16 @@ class AudioPlayer(Node):
             self.stream.start_stream()
             self.is_playing = True
             
-            print('Audio output stream started successfully')
+            logger.info('Audio output stream started successfully')
             
         except Exception as e:
-            print(f'Failed to initialize audio stream: {e}')
+            logger.error(f'Failed to initialize audio stream: {e}')
             self.is_playing = False
 
     def audio_callback(self, in_data, frame_count, time_info, status):
         """PyAudio callback function for playing audio chunks."""
         if status:
-            print(f'Audio stream status: {status}')
+            logger.warning(f'Audio stream status: {status}')
         
         try:
             # Get audio data from queue

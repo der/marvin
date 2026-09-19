@@ -26,6 +26,7 @@ dependencies = [
     "python-socketio>=5",
     "python-socketio[client]",
     "pydantic",
+    "dros @ git+ssh://git@github.com/der/dros",
 ]
 
 [project.optional-dependencies]

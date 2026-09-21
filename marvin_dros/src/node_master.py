@@ -1,7 +1,7 @@
 # Master for all nodes on Marvin which connect as a client to the DROS hub.
 import argparse
 import asyncio
-import os
+import subprocess
 
 from dros import Bus, ClientTransport, Node
 
@@ -168,7 +168,7 @@ async def main_loop():
     args = parser.parse_args()
 
     # Set audio volume
-    os.execvp("amixer", ["amixer", "-c", "0", "sset", "PCM", "90%"])
+    subprocess.run("amixer -c 0 sset PCM 90%", shell=True)
 
     # Set default topics
     eyes_topic = "/marvin/eyes"

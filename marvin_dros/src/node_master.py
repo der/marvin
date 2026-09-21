@@ -161,8 +161,8 @@ async def main_loop():
     parser = argparse.ArgumentParser(description="Marvin Node Master")
 #    parser.add_argument('--audio_device', type=str, default='Jabra', help='Audio output device name')
     parser.add_argument('--audio_in', type=str, default='respeaker', help='Audio input device name')
-    parser.add_argument('--audio_out', type=str, default='UACDemo', help='Audio output device name')
-    parser.add_argument('--audio_out_rate', type=int, default=48000, help='Audio output sample rate in Hz (device native rate)')
+    parser.add_argument('--audio_out', type=str, default='respeaker', help='Audio output device name')
+    parser.add_argument('--audio_out_rate', type=int, default=16000, help='Audio output sample rate in Hz (device native rate)')
     parser.add_argument('--host', type=str, default='main', help='Choose host: minimax or main')
     args = parser.parse_args()
 
